@@ -64,6 +64,12 @@ export default function RestaurantResults({
           const allergenReport = restaurant.allergen_report ?? restaurant.allergen_safety
           const recommendedDishes = restaurant.recommended_dishes ?? restaurant.safe_menu_items ?? []
           const isOpen = restaurant.is_open ?? restaurant.is_open_now ?? false
+          const displayRating =
+            restaurant.rating !== undefined && restaurant.rating !== null
+              ? restaurant.rating.toFixed(1)
+              : 'N/A'
+          const displayReviewCount = restaurant.review_count ?? 0
+          const displayMatchScore = Math.round(restaurant.match_score ?? 0)
 
           return (
             <div
@@ -76,10 +82,10 @@ export default function RestaurantResults({
                   <div className="restaurant-meta">
                     <span className="rating">
                       <Star size={14} fill="currentColor" />
-                      {restaurant.rating.toFixed(1)}
+                      {displayRating}
                     </span>
                     <span className="review-count">
-                      ({restaurant.review_count} reviews)
+                      ({displayReviewCount} reviews)
                     </span>
                   </div>
                 </div>
@@ -87,10 +93,10 @@ export default function RestaurantResults({
                   <div
                     className="score-badge"
                     style={{
-                      background: `hsl(${(restaurant.match_score * 1.2) % 360}, 70%, 50%)`,
+                      background: `hsl(${(displayMatchScore * 1.2) % 360}, 70%, 50%)`,
                     }}
                   >
-                    {Math.round(restaurant.match_score)}%
+                    {displayMatchScore}%
                   </div>
                   <span className="score-label">Match</span>
                 </div>
@@ -153,9 +159,9 @@ export default function RestaurantResults({
                     {recommendedDishes.slice(0, 3).map((dish, idx) => (
                       <div key={idx} className="dish-item">
                         <span className="dish-name">{dish.name}</span>
-                        {dish.price_usd && (
+                        {dish.price_usd !== undefined && dish.price_usd !== null ? (
                           <span className="dish-price">${dish.price_usd.toFixed(2)}</span>
-                        )}
+                        ) : null}
                       </div>
                     ))}
                   </div>
@@ -163,7 +169,7 @@ export default function RestaurantResults({
               )}
 
               <div className="restaurant-details">
-                {restaurant.distance_miles !== undefined && (
+                {restaurant.distance_miles !== undefined && restaurant.distance_miles !== null && (
                   <div className="detail-item">
                     <MapPin size={14} />
                     <span>{restaurant.distance_miles.toFixed(1)} mi away</span>
