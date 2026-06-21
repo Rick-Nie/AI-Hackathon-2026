@@ -89,7 +89,7 @@ export interface AllergenSafetyReport {
 
 export interface Restaurant {
   name: string;
-  yelp_id: string;
+  place_id: string;
   address: string;
   rating: number;
   review_count: number;

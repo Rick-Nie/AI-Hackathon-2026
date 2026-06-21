@@ -20,7 +20,7 @@ A sophisticated hackathon project that uses AI to understand granular dietary pr
 - 🚫 **Deterministic Allergen Engine** - Rule-based matching against 300+ ingredient aliases across 14 allergen categories
 - 💬 **Claude Chatbot Integration** - Conversational dietary preference collection via Claude API
 - 🔍 **Smart Restaurant Matching** - Weighted scoring: rating (40%) + allergen safety (30%) + diet compatibility (15%) + cuisine (10%) + price (5%)
-- 🌍 **Yelp Integration** - Real restaurant data with mock fallback for demo
+- 🌍 **Google Places Integration** - Real restaurant data with mock fallback for demo
 - 📊 **Cross-contamination Modeling** - E.g., peanut-allergic users get HIGH_RISK on tree nut dishes
 - ✅ **Nutrition Tracking** - Calorie, protein, carb, fat, fiber, sodium goals
 - 💯 **No Safety Guessing** - Allergens are NEVER decided by LLM
@@ -40,7 +40,7 @@ AI-Hackathon-2026/
 ├── backend/
 │   ├── allergens.py           # Deterministic allergen rule engine
 │   ├── models.py              # Pydantic data models
-│   ├── restaurant_matcher.py  # Yelp search + scoring
+│   ├── restaurant_matcher.py  # Places search + scoring
 │   ├── chat.py                # Claude chatbot wrapper
 │   ├── main.py                # FastAPI app (4 endpoints)
 │   ├── requirements.txt
@@ -77,7 +77,7 @@ cp .env.example .env
 
 # Add your API keys to .env
 # ANTHROPIC_API_KEY=your_claude_api_key
-# YELP_API_KEY=your_yelp_api_key (optional, mock data works without it)
+# GOOGLE_PLACES_API_KEY=your_google_places_api_key (optional, mock data works without it)
 
 uvicorn main:app --reload
 # API runs at http://localhost:8000
@@ -146,7 +146,7 @@ Health check endpoint.
 - FastAPI
 - Pydantic
 - Anthropic Claude API
-- Yelp API (optional)
+- Google Places API (optional)
 
 **Frontend:**
 - React 18

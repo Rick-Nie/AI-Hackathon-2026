@@ -1,6 +1,6 @@
 """
 Restaurant search and dietary matching logic.
-Uses Yelp Fusion API for restaurant data. Falls back to mock data if no API key.
+Uses Google Places Text Search API for restaurant data. Falls back to mock data if no API key.
 """
 
 import os
@@ -23,32 +23,32 @@ from models import (
     CuisineType,
 )
 
-YELP_API_BASE = "https://api.yelp.com/v3"
-YELP_API_KEY = os.getenv("YELP_API_KEY", "")
+GOOGLE_PLACES_TEXTSEARCH = "https://maps.googleapis.com/maps/api/place/textsearch/json"
+GOOGLE_API_KEY = os.getenv("GOOGLE_PLACES_API_KEY", "")
 
-# Map our DietaryStyle to Yelp category aliases
-DIETARY_STYLE_TO_YELP_CATEGORIES: dict[str, list[str]] = {
+# Keywords we can append to a Google text search query for dietary styles
+DIETARY_STYLE_KEYWORDS: dict[str, list[str]] = {
     DietaryStyle.VEGAN: ["vegan"],
     DietaryStyle.VEGETARIAN: ["vegetarian"],
     DietaryStyle.HALAL: ["halal"],
     DietaryStyle.KOSHER: ["kosher"],
 }
 
-# Map CuisineType to Yelp category aliases
-CUISINE_TO_YELP: dict[str, str] = {
+# Map CuisineType to simple keywords used in Google text search queries
+CUISINE_TO_KEYWORD: dict[str, str] = {
     CuisineType.ITALIAN: "italian",
     CuisineType.CHINESE: "chinese",
     CuisineType.JAPANESE: "japanese",
     CuisineType.MEXICAN: "mexican",
-    CuisineType.INDIAN: "indpak",
+    CuisineType.INDIAN: "indian",
     CuisineType.THAI: "thai",
     CuisineType.MEDITERRANEAN: "mediterranean",
-    CuisineType.AMERICAN: "newamerican",
+    CuisineType.AMERICAN: "american",
     CuisineType.FRENCH: "french",
     CuisineType.KOREAN: "korean",
     CuisineType.VIETNAMESE: "vietnamese",
     CuisineType.GREEK: "greek",
-    CuisineType.MIDDLE_EASTERN: "mideastern",
+    CuisineType.MIDDLE_EASTERN: "middle eastern",
     CuisineType.ETHIOPIAN: "ethiopian",
 }
 
@@ -88,11 +88,11 @@ async def search_restaurants(
     preferences: UserPreferences,
     limit: int = 10,
 ) -> list[RestaurantMatch]:
-    """Search Yelp and return matched + scored restaurants."""
-    if not YELP_API_KEY:
+    """Search restaurants (Google Places) and return matched + scored restaurants."""
+    if not GOOGLE_API_KEY:
         return _mock_restaurants(preferences, limit)
 
-    raw = await _yelp_search(preferences, limit * 2)  # fetch extra to allow filtering
+    raw = await _google_text_search(preferences, limit * 2)  # fetch extra to allow filtering
     matches = []
     for r in raw:
         match = await _build_restaurant_match(r, preferences)
@@ -103,50 +103,52 @@ async def search_restaurants(
     return matches[:limit]
 
 
-async def _yelp_search(preferences: UserPreferences, limit: int) -> list[dict]:
+async def _google_text_search(preferences: UserPreferences, limit: int) -> list[dict]:
+    """Use Google Places Text Search to find restaurants matching keywords.
+
+    Returns a list of Google place result dicts (as returned by the API).
+    """
     location = preferences.location or "San Francisco, CA"
-    categories = _build_yelp_categories(preferences)
-    params = {
-        "location": location,
-        "limit": min(limit, 50),
-        "sort_by": "best_match",
-        "open_now": preferences.requires_open_now,
-    }
-    if categories:
-        params["categories"] = ",".join(categories)
+    query_parts = [f"restaurants in {location}"]
+
+    # Add dietary style keywords
+    for style in preferences.dietary_styles:
+        kws = DIETARY_STYLE_KEYWORDS.get(style, [])
+        query_parts.extend(kws)
+
+    # Add cuisine keywords
+    for cuisine in preferences.preferred_cuisines:
+        kw = CUISINE_TO_KEYWORD.get(cuisine)
+        if kw:
+            query_parts.append(kw)
+
+    # Add avoid/allergen keywords as negative hints (we'll still deterministically check allergens later)
+    # Google Text Search doesn't support negative operators reliably, so we just include them for context.
     if preferences.preferred_price_range:
-        price_map = {"$": "1", "$$": "2", "$$$": "3", "$$$$": "4"}
-        price_val = price_map.get(preferences.preferred_price_range)
-        if price_val:
-            params["price"] = price_val
+        query_parts.append(f"price {preferences.preferred_price_range}")
+
+    query = " ".join(query_parts)
+
+    params = {"query": query, "key": GOOGLE_API_KEY}
 
     async with httpx.AsyncClient() as client:
-        resp = await client.get(
-            f"{YELP_API_BASE}/businesses/search",
-            headers={"Authorization": f"Bearer {YELP_API_KEY}"},
-            params=params,
-            timeout=10.0,
-        )
+        resp = await client.get(GOOGLE_PLACES_TEXTSEARCH, params=params, timeout=10.0)
         resp.raise_for_status()
         data = resp.json()
-        return data.get("businesses", [])
+        results = data.get("results", [])
+        # Truncate to requested limit
+        return results[: min(limit, len(results))]
 
 
 async def _build_restaurant_match(
     raw: dict, preferences: UserPreferences
 ) -> Optional[RestaurantMatch]:
-    location_data = raw.get("location", {})
-    address = ", ".join(filter(None, [
-        location_data.get("address1"),
-        location_data.get("city"),
-        location_data.get("state"),
-        location_data.get("zip_code"),
-    ]))
+    # Google Places result structure
+    address = raw.get("formatted_address") or ""
+    categories = raw.get("types", [])
 
-    categories = [c.get("title", "") for c in raw.get("categories", [])]
-
-    # Fetch menu details if available (Yelp doesn't always have this)
-    menu_items = await _fetch_menu_items(raw.get("id", ""), categories)
+    # Fetch menu details if available (external menu providers may be needed)
+    menu_items = await _fetch_menu_items(raw.get("place_id", ""), categories)
 
     # Allergen safety analysis (deterministic)
     allergen_report = None
@@ -186,22 +188,25 @@ async def _build_restaurant_match(
     if preferences.allergens and allergen_report and allergen_report.safety_score < 20:
         return None
 
-    distance = raw.get("distance")
-    distance_miles = round(distance / 1609.34, 2) if distance else None
+    # Google provides geometry.location with lat/lng; distance calculation requires user geocode.
+    distance_miles = None
+    if raw.get("geometry") and raw["geometry"].get("location") and preferences.location is None:
+        # if we had user's lat/lng we could compute distance; skip for now
+        pass
 
     return RestaurantMatch(
-        yelp_id=raw.get("id", ""),
+        yelp_id=raw.get("place_id", ""),
         name=raw.get("name", ""),
         rating=raw.get("rating", 0.0),
-        review_count=raw.get("review_count", 0),
-        price_range=raw.get("price"),
+        review_count=raw.get("user_ratings_total", 0),
+        price_range=str(raw.get("price_level")) if raw.get("price_level") is not None else None,
         cuisine_types=categories,
         address=address,
         distance_miles=distance_miles,
-        phone=raw.get("display_phone"),
+        phone=None,
         url=raw.get("url"),
-        is_open_now=not raw.get("is_closed", True),
-        image_url=raw.get("image_url"),
+        is_open_now=raw.get("opening_hours", {}).get("open_now") if raw.get("opening_hours") else None,
+        image_url=None,
         allergen_safety=allergen_report,
         dietary_compatibility=dietary_report,
         safe_menu_items=safe_items[:10],
@@ -266,7 +271,7 @@ def _compute_match_score(
     score = 0.0
     reasons = []
 
-    # Base: Yelp rating (0-40 pts)
+    # Base: rating (0-40 pts)
     rating = raw.get("rating", 0.0)
     score += (rating / 5.0) * 40
     reasons.append(f"Rated {rating}/5")
@@ -302,21 +307,13 @@ def _compute_match_score(
     return round(min(score, 100), 1), reasons
 
 
-def _build_yelp_categories(preferences: UserPreferences) -> list[str]:
-    cats = []
-    for style in preferences.dietary_styles:
-        cats.extend(DIETARY_STYLE_TO_YELP_CATEGORIES.get(style, []))
-    for cuisine in preferences.preferred_cuisines:
-        yelp_cat = CUISINE_TO_YELP.get(cuisine)
-        if yelp_cat:
-            cats.append(yelp_cat)
-    return list(set(cats)) or ["restaurants"]
+# Legacy category builder removed; Google Text Search builds queries inline.
 
 
 async def _fetch_menu_items(restaurant_id: str, categories: list[str]) -> list[MenuItem]:
     """
-    In a real implementation this would call a menu API (e.g., Yelp menu endpoint,
-    Locu, SinglePlatform). For now we return realistic mock items based on cuisine type.
+    In a real implementation this would call a menu API (e.g., Place Details, Locu, SinglePlatform).
+    For now we return realistic mock items based on cuisine type.
     """
     return _mock_menu_for_cuisine(categories)
 
@@ -356,7 +353,7 @@ def _mock_menu_for_cuisine(categories: list[str]) -> list[MenuItem]:
 
 
 def _mock_restaurants(preferences: UserPreferences, limit: int) -> list[RestaurantMatch]:
-    """Returns mock restaurant data when no Yelp API key is configured."""
+    """Returns mock restaurant data when no Google Places API key is configured."""
     from models import AllergenSafetyReport, DietaryCompatibilityReport
 
     mocks = [

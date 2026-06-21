@@ -60,7 +60,7 @@ export default function RestaurantResults({
 
       <div className="restaurants-grid">
         {restaurants.map((restaurant) => (
-          <div key={restaurant.yelp_id} className="restaurant-card">
+          <div key={restaurant.place_id} className="restaurant-card">
             <div className="card-header">
               <div>
                 <h3>{restaurant.name}</h3>
@@ -170,7 +170,7 @@ export default function RestaurantResults({
                 <div className="detail-item">
                   <Globe size={14} />
                   <a href={restaurant.url} target="_blank" rel="noopener noreferrer">
-                    View on Yelp
+                    View on Map
                   </a>
                 </div>
               )}
