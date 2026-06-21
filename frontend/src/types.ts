@@ -80,29 +80,46 @@ export interface MenuItem {
 }
 
 export interface AllergenSafetyReport {
-  overall_risk: string;
+  // overall_risk can be a string label or a counts dict from the backend
+  overall_risk: string | Record<string, number>;
   is_safe: boolean;
   safety_score: number;
   unsafe_items: string[];
   high_risk_items: string[];
+  safe_item_count: number;
+  total_item_count: number;
+  warnings: string[];
 }
 
+export interface DietaryCompatibilityReport {
+  is_compatible: boolean;
+  compatible_styles: string[];
+  incompatible_styles: string[];
+  disliked_ingredients_found: string[];
+  preferred_cuisine_match: boolean;
+  notes: string[];
+}
+
+// Matches backend RestaurantMatch model exactly
 export interface Restaurant {
-  name: string;
   yelp_id: string;
-  address: string;
+  name: string;
   rating: number;
   review_count: number;
-  cuisines: string[];
   price_range?: string;
+  cuisine_types: string[];
+  address: string;
+  distance_miles?: number;
   phone?: string;
   url?: string;
-  distance_miles?: number;
-  is_open: boolean;
+  is_open_now?: boolean;
+  image_url?: string;
+  allergen_safety?: AllergenSafetyReport;
+  dietary_compatibility?: DietaryCompatibilityReport;
+  safe_menu_items: MenuItem[];
   match_score: number;
-  dietary_tags: string[];
-  recommended_dishes: MenuItem[];
-  allergen_report: AllergenSafetyReport;
+  match_reasons: string[];
+  warnings: string[];
 }
 
 export interface RestaurantSearchRequest {
