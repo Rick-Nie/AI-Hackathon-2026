@@ -40,6 +40,7 @@ export enum SpiceLevel {
 export interface UserPreferences {
   dietary_styles: DietaryStyle[];
   allergens: string[];
+  liked_ingredients: string[];
   disliked_ingredients: string[];
   preferred_cuisines: CuisineType[];
   disliked_cuisines: CuisineType[];

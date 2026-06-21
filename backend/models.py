@@ -48,6 +48,10 @@ class UserPreferences(BaseModel):
         default_factory=list,
         description="Allergens to AVOID (deterministic rule matching)",
     )
+    liked_ingredients: list[str] = Field(
+        default_factory=list,
+        description="Ingredients or foods the user likes and wants recommended",
+    )
     disliked_ingredients: list[str] = Field(
         default_factory=list,
         description="Ingredients user dislikes but aren't safety-critical",

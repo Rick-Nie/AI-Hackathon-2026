@@ -41,10 +41,32 @@ export default function PreferenceBuilder({
     onPreferencesChange(updated)
   }
 
+  const removeLikedIngredient = (ingredient: string) => {
+    const updated = {
+      ...preferences,
+      liked_ingredients: preferences.liked_ingredients.filter(
+        (item) => item !== ingredient
+      ),
+    }
+    onPreferencesChange(updated)
+  }
+
+  const removeDislikedIngredient = (ingredient: string) => {
+    const updated = {
+      ...preferences,
+      disliked_ingredients: preferences.disliked_ingredients.filter(
+        (item) => item !== ingredient
+      ),
+    }
+    onPreferencesChange(updated)
+  }
+
   const hasPreferences =
     preferences.allergens.length > 0 ||
     preferences.dietary_styles.length > 0 ||
-    preferences.preferred_cuisines.length > 0
+    preferences.preferred_cuisines.length > 0 ||
+    preferences.liked_ingredients.length > 0 ||
+    preferences.disliked_ingredients.length > 0
 
   return (
     <div className="preference-builder">
@@ -76,6 +98,46 @@ export default function PreferenceBuilder({
         </div>
       )}
 
+      {preferences.liked_ingredients.length > 0 && (
+        <div className="pref-section">
+          <label className="pref-label">👍 Likes</label>
+          <div className="pref-tags">
+            {preferences.liked_ingredients.map((ingredient) => (
+              <tag key={ingredient} className="pref-tag liked-tag">
+                <span>{ingredient}</span>
+                <button
+                  onClick={() => removeLikedIngredient(ingredient)}
+                  className="tag-remove"
+                  title={`Remove ${ingredient}`}
+                >
+                  <X size={14} />
+                </button>
+              </tag>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {preferences.disliked_ingredients.length > 0 && (
+        <div className="pref-section">
+          <label className="pref-label">👎 Dislikes</label>
+          <div className="pref-tags">
+            {preferences.disliked_ingredients.map((ingredient) => (
+              <tag key={ingredient} className="pref-tag dislike-tag">
+                <span>{ingredient}</span>
+                <button
+                  onClick={() => removeDislikedIngredient(ingredient)}
+                  className="tag-remove"
+                  title={`Remove ${ingredient}`}
+                >
+                  <X size={14} />
+                </button>
+              </tag>
+            ))}
+          </div>
+        </div>
+      )}
+
       {preferences.dietary_styles.length > 0 && (
         <div className="pref-section">
           <label className="pref-label">🥗 Diet</label>
@@ -96,7 +158,7 @@ export default function PreferenceBuilder({
         </div>
       )}
 
-      {preferences.preferred_cuisines.length > 0 && (
+          {preferences.preferred_cuisines.length > 0 && (
         <div className="pref-section">
           <label className="pref-label">🍜 Cuisines</label>
           <div className="pref-tags">

@@ -79,6 +79,18 @@
   border-color: #ffc99e;
 }
 
+.liked-tag {
+  background: #e6f7ff;
+  color: #0f766e;
+  border-color: #7dd3fc;
+}
+
+.dislike-tag {
+  background: #fff1f2;
+  color: #be123c;
+  border-color: #fca5a5;
+}
+
 .tag-remove {
   display: flex;
   align-items: center;

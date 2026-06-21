@@ -10,6 +10,7 @@ import { MessageCircle, Utensils } from 'lucide-react'
 const DEFAULT_PREFERENCES: UserPreferences = {
   dietary_styles: [],
   allergens: [],
+  liked_ingredients: [],
   disliked_ingredients: [],
   preferred_cuisines: [],
   disliked_cuisines: [],

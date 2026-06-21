@@ -10,41 +10,46 @@ from models import ChatMessage, UserPreferences
 
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
 
-SYSTEM_PROMPT = """You are DietMate, a friendly and conversational AI assistant for dietary preferences and restaurant recommendations.
+SYSTEM_PROMPT = """You are DietMate, a chill AI friend helping people find restaurants.
 
-Your personality:
-- Chat like a real person, not a robot
-- Be warm, helpful, and respectful
-- Remember context from the entire conversation
-- Acknowledge off-topic messages gracefully before guiding back to restaurants
-- Use natural language, not bullet points (unless specifically asked)
+Your job:
+- Chat naturally about food and dietary needs
+- Listen for: what they LIKE, what they CAN'T HAVE (allergies), and what they DISLIKE
+- Acknowledge when you learn something: "Got it, you're allergic to milk" or "So you love sushi!"
+- Use their preferences to suggest restaurants
+- Build a profile as you chat
 
-Your goals:
-1. Have a natural conversation about what they want to eat
-2. Gradually learn their dietary needs, allergens, and food preferences
-3. Extract structured data (allergies, diet style, cuisines) from casual chat
-4. Suggest restaurant searches when enough info is gathered
-5. Never guess on allergen safety — defer to our deterministic engine
+How to handle preference changes:
+- Users can change their mind. If they contradict an earlier preference, update the profile accordingly.
+- If they say "I no longer want gluten" or "I'm not vegan anymore", remove the old preference.
+- If they say "I used to like cheese but now I avoid it", move it from likes to dislikes.
+- Always prefer the most recent user intent when preferences conflict.
 
-Key rules:
-- NEVER make allergen safety claims — always use the deterministic rule engine
-- When they mention an allergen concern, acknowledge it and recommend searching to let our system verify
-- Be granular about allergens (ask specifics if they say "nuts")
-- Distinguish between "dislikes" and "allergies" (crucial difference)
-- If they ask off-topic questions, respond naturally then gently redirect
+Silent extraction (do this in the background, don't announce it):
+- Extract: dietary_styles, allergens, liked_ingredients, disliked_ingredients, preferred_cuisines, disliked_cuisines, etc.
+- Put extracted data in <preferences_update>{"allergens": ["milk"], "disliked_ingredients": ["cheese"], ...}</preferences_update>
+- If the user changes their mind, output the updated current profile so the app can override the old context.
+- Only extract what they actually said—don't guess
 
-Preference extraction:
-- Listen for: dietary styles (vegan, halal, kosher, keto, etc.), allergens, cuisines, budget, location
-- When you hear preferences, extract them in JSON at the end (wrapped in <preferences_update>...</preferences_update>)
-- Only include explicitly mentioned preferences, not assumptions
-- Build incrementally—don't force all details at once
+When they mention food/diet:
+- ACKNOWLEDGE it explicitly: "Ah, gluten-free, got it!" or "So no fish, noted!"
+- Use their profile when suggesting: "Based on your likes and allergies..."
+- Reference their preferences: "You mentioned you like Italian and can't have shellfish..."
 
-Example good responses:
-- User: "I want milk" → You: "Are you looking for restaurants with dairy options, or do you have concerns about milk?"
-- User: "I can't drink milk" → You: "Got it, milk allergy! That's important to flag. Any other allergens?"
-- User: "Why are you repeating yourself?" → You: "Sorry about that! Let me start fresh. What kind of food are you craving?"
+Example flow:
+User: "I'm allergic to milk"
+You: "Got it, milk allergy—that's important. Any other foods you need to avoid?"
+(Extract: allergens: ["milk"])
 
-Remember: The conversation should feel natural, not scripted."""
+User: "I love sushi"
+You: "Nice! Sushi is great. Any restrictions I should know about?"
+(Extract: preferred_cuisines: ["japanese"])
+
+User: "Actually, I don't like cheese anymore"
+You: "Understood, cheese is off the list now. Anything else you want me to avoid?"
+(Extract: disliked_ingredients: ["cheese"])
+
+Keep it conversational and real."""
 
 
 def _build_messages(
@@ -107,7 +112,6 @@ async def chat(
     response = client.messages.create(
         model="claude-opus-4-8",
         max_tokens=1024,
-        thinking={"type": "adaptive"},
         system=system,
         messages=messages,
     )
@@ -120,55 +124,62 @@ async def chat(
     # Extract any preference updates
     pref_data = _parse_preferences_update(full_text)
     updated_preferences = current_preferences
+
+    def _remove_conflicts(current_dict: dict, new_data: dict) -> dict:
+        # If an item moves from liked to disliked or allergic, remove the old conflicting value.
+        for item in new_data.get("liked_ingredients", []):
+            if item in current_dict.get("disliked_ingredients", []):
+                current_dict["disliked_ingredients"] = [x for x in current_dict["disliked_ingredients"] if x != item]
+            if item in current_dict.get("allergens", []):
+                current_dict["allergens"] = [x for x in current_dict["allergens"] if x != item]
+
+        for item in new_data.get("disliked_ingredients", []):
+            if item in current_dict.get("liked_ingredients", []):
+                current_dict["liked_ingredients"] = [x for x in current_dict["liked_ingredients"] if x != item]
+
+        for item in new_data.get("allergens", []):
+            if item in current_dict.get("liked_ingredients", []):
+                current_dict["liked_ingredients"] = [x for x in current_dict["liked_ingredients"] if x != item]
+            if item in current_dict.get("disliked_ingredients", []):
+                current_dict["disliked_ingredients"] = [x for x in current_dict["disliked_ingredients"] if x != item]
+
+        # If user switches dietary style from one to another, we preserve new intent while not removing unrelated styles.
+        return current_dict
+
     if pref_data:
         try:
             if current_preferences:
                 current_dict = current_preferences.model_dump()
-                # Merge: extend lists, override scalars
                 for key, val in pref_data.items():
-                    if isinstance(val, list) and isinstance(current_dict.get(key), list):
+                    if isinstance(val, list) and key in current_dict and isinstance(current_dict.get(key), list):
                         existing = current_dict[key]
-                        current_dict[key] = list(set(existing + val))
-                    else:
+                        current_dict[key] = list(dict.fromkeys(existing + val))
+                        current_dict = _remove_conflicts(current_dict, {key: val})
+                    elif val:
                         current_dict[key] = val
                 updated_preferences = UserPreferences(**current_dict)
             else:
                 updated_preferences = UserPreferences(**pref_data)
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"Preference merge error: {e}")
+            updated_preferences = current_preferences
+
+    if not updated_preferences and current_preferences:
+        updated_preferences = current_preferences
 
     clean_reply = _clean_response(full_text)
     return clean_reply, updated_preferences
 
 
 def _mock_chat_response(message: str, prefs: UserPreferences | None) -> str:
+    """Fallback when API key isn't set. Keep it simple."""
     msg_lower = message.lower()
-    if any(word in msg_lower for word in ["allergen", "allergy", "allergic"]):
-        return (
-            "I understand you have allergen concerns! Our system uses a deterministic rule engine "
-            "to check all allergens — it never relies on AI guessing. Please tell me which specific "
-            "allergens you need to avoid (e.g., peanuts, tree nuts, milk, eggs, wheat, soy, fish, "
-            "shellfish, sesame) and I'll make sure our restaurant search flags any risks including "
-            "cross-contamination. What allergens should I watch for?"
-        )
-    if any(word in msg_lower for word in ["vegan", "vegetarian", "halal", "kosher", "keto"]):
-        return (
-            "Great, I can help filter restaurants for your dietary style! "
-            "Could you also tell me: (1) any allergens to avoid, (2) specific ingredients you dislike "
-            "even if not allergic, and (3) your preferred cuisine types and budget? "
-            "The more detail you give, the better I can match you."
-        )
-    if any(word in msg_lower for word in ["restaurant", "food", "eat", "hungry", "recommend"]):
-        return (
-            "I'd love to find you the perfect restaurant! To give you the best match, I need a few details:\n"
-            "1. Any dietary restrictions or styles (vegan, gluten-free, halal, etc.)?\n"
-            "2. Any allergens to strictly avoid?\n"
-            "3. What cuisine are you in the mood for?\n"
-            "4. What's your location and how far are you willing to travel?\n"
-            "5. Budget range ($, $$, $$$)?"
-        )
-    return (
-        "Hi! I'm DietMate. I help you find restaurants that perfectly match your dietary needs — "
-        "including allergens, dietary styles, ingredient preferences, and more. "
-        "Tell me about your dietary preferences or ask me to find restaurants near you!"
-    )
+    
+    # Very minimal keyword matching
+    if any(word in msg_lower for word in ["search", "find", "restaurant", "where"]):
+        return "I'd help you search for restaurants! Add your Anthropic API key to get started."
+    if any(word in msg_lower for word in ["allerg", "allergic"]):
+        return "Got it—allergies are important. Our system has a deterministic allergen checker that'll help with that."
+    
+    # Default: just chat back
+    return f"I hear you! Tell me more about what you're looking for in a restaurant."
