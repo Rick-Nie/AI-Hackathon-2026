@@ -1,0 +1,39 @@
+export var DietaryStyle;
+(function (DietaryStyle) {
+    DietaryStyle["VEGAN"] = "vegan";
+    DietaryStyle["VEGETARIAN"] = "vegetarian";
+    DietaryStyle["PESCATARIAN"] = "pescatarian";
+    DietaryStyle["HALAL"] = "halal";
+    DietaryStyle["KOSHER"] = "kosher";
+    DietaryStyle["KETO"] = "keto";
+    DietaryStyle["PALEO"] = "paleo";
+    DietaryStyle["LOW_FODMAP"] = "low_fodmap";
+    DietaryStyle["RAW"] = "raw";
+    DietaryStyle["OMNIVORE"] = "omnivore";
+})(DietaryStyle || (DietaryStyle = {}));
+export var CuisineType;
+(function (CuisineType) {
+    CuisineType["ITALIAN"] = "italian";
+    CuisineType["CHINESE"] = "chinese";
+    CuisineType["JAPANESE"] = "japanese";
+    CuisineType["MEXICAN"] = "mexican";
+    CuisineType["INDIAN"] = "indian";
+    CuisineType["THAI"] = "thai";
+    CuisineType["MEDITERRANEAN"] = "mediterranean";
+    CuisineType["AMERICAN"] = "american";
+    CuisineType["FRENCH"] = "french";
+    CuisineType["KOREAN"] = "korean";
+    CuisineType["VIETNAMESE"] = "vietnamese";
+    CuisineType["GREEK"] = "greek";
+    CuisineType["MIDDLE_EASTERN"] = "middle_eastern";
+    CuisineType["ETHIOPIAN"] = "ethiopian";
+    CuisineType["OTHER"] = "other";
+})(CuisineType || (CuisineType = {}));
+export var SpiceLevel;
+(function (SpiceLevel) {
+    SpiceLevel["NONE"] = "none";
+    SpiceLevel["MILD"] = "mild";
+    SpiceLevel["MEDIUM"] = "medium";
+    SpiceLevel["HOT"] = "hot";
+    SpiceLevel["EXTRA_HOT"] = "extra_hot";
+})(SpiceLevel || (SpiceLevel = {}));
