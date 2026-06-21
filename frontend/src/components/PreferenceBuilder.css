@@ -1,0 +1,142 @@
+.preference-builder {
+  background: white;
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+  height: fit-content;
+  position: sticky;
+  top: 20px;
+}
+
+.preference-builder h3 {
+  margin: 0 0 16px 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.no-prefs-message {
+  color: #999;
+  font-size: 12px;
+  text-align: center;
+  padding: 20px 0;
+  font-style: italic;
+}
+
+.pref-section {
+  margin-bottom: 16px;
+}
+
+.pref-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: #667eea;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.pref-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.pref-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  border: 1px solid #e0e0e0;
+  animation: slideIn 0.3s ease-out;
+}
+
+.pref-tag span {
+  white-space: nowrap;
+}
+
+.allergen-tag {
+  background: #ffe0e0;
+  color: #c41e3a;
+  border-color: #ff9999;
+}
+
+.diet-tag {
+  background: #e0ffe0;
+  color: #1e7e1e;
+  border-color: #99ff99;
+}
+
+.cuisine-tag {
+  background: #fff5e0;
+  color: #d97706;
+  border-color: #ffc99e;
+}
+
+.tag-remove {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  opacity: 0.7;
+  transition: opacity 0.2s ease;
+}
+
+.tag-remove:hover {
+  opacity: 1;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.search-btn {
+  width: 100%;
+  padding: 12px;
+  margin-top: 16px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.search-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+}
+
+.search-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+@media (max-width: 1024px) {
+  .preference-builder {
+    position: static;
+    margin-top: 20px;
+  }
+}
