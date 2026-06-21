@@ -4,8 +4,10 @@ import ChatInterface from './components/ChatInterface'
 import PreferenceBuilder from './components/PreferenceBuilder'
 import MapResults from './pages/MapResults'
 import Sidebar from './components/Sidebar'
+import LogoIcon from './components/LogoIcon'
 import { UserPreferences, SpiceLevel } from './types'
-import { Utensils } from 'lucide-react'
+
+const PREFS_STORAGE_KEY = 'dietmate_preferences'
 
 const DEFAULT_PREFERENCES: UserPreferences = {
   dietary_styles: [],
@@ -22,15 +24,28 @@ const DEFAULT_PREFERENCES: UserPreferences = {
   requires_open_now: true,
 }
 
+function loadPreferences(): UserPreferences {
+  try {
+    const raw = localStorage.getItem(PREFS_STORAGE_KEY)
+    if (raw) return { ...DEFAULT_PREFERENCES, ...JSON.parse(raw) }
+  } catch {}
+  return DEFAULT_PREFERENCES
+}
+
+type Tab = 'chat' | 'restaurants'
+
 function App() {
-  const [preferences, setPreferences] = useState<UserPreferences>(DEFAULT_PREFERENCES)
-  const [tab, setTab] = useState<'chat' | 'restaurants'>('chat')
+  const [preferences, setPreferences] = useState<UserPreferences>(loadPreferences)
+  const [tab, setTab] = useState<Tab>('chat')
+
+  useEffect(() => {
+    localStorage.setItem(PREFS_STORAGE_KEY, JSON.stringify(preferences))
+  }, [preferences])
 
   const handlePreferencesUpdate = (updatedPrefs: UserPreferences) => {
     setPreferences(updatedPrefs)
   }
 
-  // Auto-detect location on startup (browser caches permission — fast if already granted)
   useEffect(() => {
     if (!('geolocation' in navigator)) return
     navigator.geolocation.getCurrentPosition(
@@ -44,7 +59,7 @@ function App() {
           location: p.location || `${lat.toFixed(4)}, ${lon.toFixed(4)}`,
         }))
       },
-      () => { /* permission denied — user can still click "Use My Location" in the map tab */ },
+      () => {},
       { enableHighAccuracy: true, timeout: 10000 }
     )
   }, [])
@@ -54,18 +69,18 @@ function App() {
       <header className="app-header">
         <div className="header-content">
           <div className="logo">
-            <Utensils size={32} />
-            <h1>DietMate</h1>
+            <LogoIcon />
+            <h1>DietMate67</h1>
             <p>Find restaurants that match YOUR dietary needs</p>
           </div>
         </div>
       </header>
 
       <div className="container with-sidebar">
-        <Sidebar active={tab} setActive={(t) => setTab(t)} />
+        <Sidebar active={tab} setActive={setTab} />
 
         <div className="main-content">
-          {tab === 'chat' ? (
+          {tab === 'chat' && (
             <div className="chat-section">
               <ChatInterface
                 preferences={preferences}
@@ -79,7 +94,8 @@ function App() {
                 loading={false}
               />
             </div>
-          ) : (
+          )}
+          {tab === 'restaurants' && (
             <MapResults
               preferences={preferences}
               onLocationSaved={(lat, lon, label) =>

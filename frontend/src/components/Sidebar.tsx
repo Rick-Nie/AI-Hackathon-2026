@@ -2,9 +2,11 @@ import { useState } from 'react'
 import { MessageCircle, MapPin } from 'lucide-react'
 import './Sidebar.css'
 
+type Tab = 'chat' | 'restaurants'
+
 interface SidebarProps {
-  active: 'chat' | 'restaurants'
-  setActive: (t: 'chat' | 'restaurants') => void
+  active: Tab
+  setActive: (t: Tab) => void
 }
 
 export default function Sidebar({ active, setActive }: SidebarProps) {

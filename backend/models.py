@@ -124,6 +124,8 @@ class RestaurantMatch(BaseModel):
     price_range: Optional[str] = None
     cuisine_types: list[str] = Field(default_factory=list)
     address: str
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
     distance_miles: Optional[float] = None
     phone: Optional[str] = None
     url: Optional[str] = None
@@ -137,10 +139,16 @@ class RestaurantMatch(BaseModel):
     match_score: float = Field(default=0.0, description="0-100 composite match score")
     match_reasons: list[str] = Field(default_factory=list)
     warnings: list[str] = Field(default_factory=list)
+    google_reviews: list[dict] = Field(default_factory=list)
+    food_types: list[str] = Field(default_factory=list)
+    ai_dietary_note: Optional[str] = None
+    fits_diet: Optional[bool] = None
 
 
 class RestaurantSearchRequest(BaseModel):
     preferences: UserPreferences
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
     limit: int = Field(default=10, ge=1, le=50)
 
 
@@ -149,6 +157,14 @@ class RestaurantSearchResponse(BaseModel):
     total_found: int
     search_location: str
     preferences_summary: str
+
+
+class MapSearchRequest(BaseModel):
+    preferences: UserPreferences
+    latitude: float
+    longitude: float
+    radius_meters: int = Field(default=2000, ge=100, le=50000)
+    limit: int = Field(default=50, ge=1, le=200)
 
 
 class ChatMessage(BaseModel):

@@ -296,6 +296,35 @@
   line-height: 1.4;
 }
 
+.mr-card-sub {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 2px;
+}
+
+.mr-open-badge {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 999px;
+}
+
+.mr-open-badge--open   { background: #d1fae5; color: #065f46; }
+.mr-open-badge--closed { background: #fee2e2; color: #991b1b; }
+
+.mr-filter-chip--open {
+  border-color: #10b981;
+  color: #065f46;
+}
+
+.mr-filter-chip--open.mr-filter-chip--active {
+  background: #10b981;
+  color: white;
+  border-color: #10b981;
+}
+
 .mr-card-rating {
   display: flex;
   align-items: center;

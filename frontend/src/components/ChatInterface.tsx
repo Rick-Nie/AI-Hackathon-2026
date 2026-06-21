@@ -19,7 +19,7 @@ export default function ChatInterface({
     {
       role: 'assistant',
       content:
-        "Hi! I'm DietMate, your AI assistant for finding perfect restaurants. Tell me about your dietary preferences, allergies, or any dietary restrictions. I'll help you find restaurants that match your needs!",
+        "Hi! I'm DietMate67, your AI assistant for finding perfect restaurants. Tell me about your dietary preferences, allergies, or any dietary restrictions. I'll help you find restaurants that match your needs!",
     },
   ])
   const [input, setInput] = useState('')

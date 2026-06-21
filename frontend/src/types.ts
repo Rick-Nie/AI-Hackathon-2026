@@ -119,6 +119,7 @@ export interface Restaurant {
   ai_dietary_note?: string;
   food_types?: string[];
   fits_diet?: boolean | null;
+  is_open_now?: boolean | null;
 }
 
 export interface RestaurantSearchRequest {

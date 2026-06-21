@@ -17,13 +17,32 @@ function scoreColor(score: number): string {
 }
 
 function dietBadge(r: Restaurant, prefs: UserPreferences): { label: string; cls: string; note: string } {
-  // If Claude gave us an AI note, use it for the note
   const aiNote = r.ai_dietary_note || ''
 
-  const hasPrefs = prefs.allergens.length > 0 || prefs.dietary_styles.length > 0
+  const hasPrefs =
+    prefs.allergens.length > 0 ||
+    prefs.dietary_styles.length > 0 ||
+    prefs.disliked_ingredients.length > 0 ||
+    prefs.liked_ingredients.length > 0 ||
+    prefs.preferred_cuisines.length > 0 ||
+    prefs.disliked_cuisines.length > 0
+
   if (!hasPrefs) return { label: 'No filters set', cls: 'gray', note: 'Add dietary preferences to see compatibility' }
 
-  // Lightweight cuisine-based heuristic for badge colour
+  // Use the backend AI verdict when available
+  if (r.fits_diet === false) {
+    const warnText = (r.warnings ?? []).join(' · ')
+    return { label: 'Not compatible', cls: 'red', note: warnText || aiNote || 'Conflicts with your dietary preferences' }
+  }
+  if (r.fits_diet === true) {
+    return { label: 'Compatible', cls: 'green', note: aiNote || 'Matches your dietary preferences' }
+  }
+
+  // Fallback heuristic when AI verdict is uncertain
+  if (prefs.allergens.length > 0) {
+    return { label: 'Verify allergens', cls: 'yellow', note: aiNote || `Call ahead — you're allergic to: ${prefs.allergens.join(', ')}` }
+  }
+
   const text = (r.cuisine_types || []).join(' ').toLowerCase()
   const issues: string[] = []
   for (const style of prefs.dietary_styles) {
@@ -35,9 +54,6 @@ function dietBadge(r: Restaurant, prefs: UserPreferences): { label: string; cls:
     if (s === 'kosher' && /pork|shellfish|seafood/.test(text)) issues.push(style)
   }
 
-  if (prefs.allergens.length > 0) {
-    return { label: 'Verify allergens', cls: 'yellow', note: aiNote || `Call ahead — you're allergic to: ${prefs.allergens.join(', ')}` }
-  }
   if (issues.length > 0) {
     return { label: 'May not fit diet', cls: 'yellow', note: aiNote || `Cuisine may conflict with: ${issues.join(', ')}` }
   }
@@ -71,6 +87,7 @@ export default function MapResults({ preferences, onLocationSaved }: Props) {
   const [mapRef, setMapRef] = useState<google.maps.Map | null>(null)
   const [activeFoodFilters, setActiveFoodFilters] = useState<Set<string>>(new Set())
   const [compatibleOnly, setCompatibleOnly] = useState(false)
+  const [openOnly, setOpenOnly] = useState(false)
   const cardRefs = useRef<Record<string, HTMLDivElement | null>>({})
 
   const hasLocation = preferences.latitude !== undefined && preferences.longitude !== undefined
@@ -155,6 +172,7 @@ export default function MapResults({ preferences, onLocationSaved }: Props) {
 
   // Apply filters
   const visibleRestaurants = restaurants.filter((r) => {
+    if (openOnly && r.is_open_now !== true) return false
     if (compatibleOnly && r.fits_diet === false) return false
     if (activeFoodFilters.size === 0) return true
     const foodSet = new Set((r.food_types ?? []).map((f) => f.toLowerCase()))
@@ -175,7 +193,7 @@ export default function MapResults({ preferences, onLocationSaved }: Props) {
         <div className="mr-placeholder-card">
           <div className="mr-placeholder-icon">📍</div>
           <h2>Save Your Location</h2>
-          <p>Allow DietMate to detect your location and find nearby restaurants on Google Maps.</p>
+          <p>Allow DietMate67 to detect your location and find nearby restaurants on Google Maps.</p>
           {error && <p className="mr-error-text">{error}</p>}
           <button className="mr-locate-btn" onClick={handleSaveLocation} disabled={locating}>
             {locating ? 'Detecting…' : 'Use My Location'}
@@ -206,6 +224,12 @@ export default function MapResults({ preferences, onLocationSaved }: Props) {
           {!loading && restaurants.length > 0 && (
             <div className="mr-filter-bar">
               <button
+                className={`mr-filter-chip mr-filter-chip--open${openOnly ? ' mr-filter-chip--active' : ''}`}
+                onClick={() => setOpenOnly((v) => !v)}
+              >
+                🟢 Open Now
+              </button>
+              <button
                 className={`mr-filter-chip mr-filter-chip--compat${compatibleOnly ? ' mr-filter-chip--active' : ''}`}
                 onClick={() => setCompatibleOnly((v) => !v)}
               >
@@ -221,10 +245,10 @@ export default function MapResults({ preferences, onLocationSaved }: Props) {
                   {tag} <span className="mr-filter-count">{count}</span>
                 </button>
               ))}
-              {(activeFoodFilters.size > 0 || compatibleOnly) && (
+              {(activeFoodFilters.size > 0 || compatibleOnly || openOnly) && (
                 <button
                   className="mr-filter-chip mr-filter-chip--clear"
-                  onClick={() => { setActiveFoodFilters(new Set()); setCompatibleOnly(false) }}
+                  onClick={() => { setActiveFoodFilters(new Set()); setCompatibleOnly(false); setOpenOnly(false) }}
                 >
                   ✕ Clear
                 </button>
@@ -251,13 +275,21 @@ export default function MapResults({ preferences, onLocationSaved }: Props) {
                 <div className="mr-card-top">
                   <div>
                     <div className="mr-card-name">{r.name}</div>
-                    {r.rating > 0 && (
-                      <div className="mr-card-rating">
-                        <Star size={12} fill="#fbbf24" color="#fbbf24" />
-                        <span>{r.rating.toFixed(1)}</span>
-                        <span className="mr-review-count">({r.review_count})</span>
-                      </div>
-                    )}
+                    <div className="mr-card-sub">
+                      {r.rating > 0 && (
+                        <div className="mr-card-rating">
+                          <Star size={12} fill="#fbbf24" color="#fbbf24" />
+                          <span>{r.rating.toFixed(1)}</span>
+                          <span className="mr-review-count">({r.review_count})</span>
+                        </div>
+                      )}
+                      {r.is_open_now === true && (
+                        <span className="mr-open-badge mr-open-badge--open">🟢 Open</span>
+                      )}
+                      {r.is_open_now === false && (
+                        <span className="mr-open-badge mr-open-badge--closed">🔴 Closed</span>
+                      )}
+                    </div>
                   </div>
                   <div className="mr-score" style={{ background: scoreColor(r.match_score ?? 0) }}>
                     {Math.round(r.match_score ?? 0)}
