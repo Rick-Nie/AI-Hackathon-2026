@@ -1,0 +1,132 @@
+.map-page {
+  height: 600px;
+  width: 100%;
+  position: relative;
+}
+
+.map-placeholder {
+  height: 600px;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #f0f4ff 0%, #faf5ff 100%);
+  border-radius: 16px;
+}
+
+.map-placeholder-card {
+  background: white;
+  border-radius: 16px;
+  padding: 40px 48px;
+  text-align: center;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.12);
+  max-width: 420px;
+  width: 100%;
+}
+
+.map-placeholder-icon {
+  font-size: 56px;
+  margin-bottom: 16px;
+}
+
+.map-placeholder-card h2 {
+  margin: 0 0 12px;
+  font-size: 22px;
+  font-weight: 700;
+  color: #1a1a2e;
+}
+
+.map-placeholder-card p {
+  color: #666;
+  font-size: 14px;
+  line-height: 1.6;
+  margin: 0 0 20px;
+}
+
+.map-location-btn {
+  width: 100%;
+  padding: 14px 20px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-bottom: 12px;
+}
+
+.map-location-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+}
+
+.map-location-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.map-location-hint {
+  font-size: 11px !important;
+  color: #aaa !important;
+  margin: 0 !important;
+}
+
+.map-location-error {
+  color: #c41e3a !important;
+  font-size: 13px !important;
+  background: #fff0f0;
+  border-radius: 6px;
+  padding: 8px 12px;
+}
+
+.map-error-banner,
+.map-loading-banner {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1000;
+  padding: 8px 20px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 500;
+  pointer-events: none;
+}
+
+.map-error-banner {
+  background: #fff0f0;
+  color: #c41e3a;
+  border: 1px solid #fca5a5;
+}
+
+.map-loading-banner {
+  background: white;
+  color: #667eea;
+  border: 1px solid #667eea;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.map-popup strong {
+  display: block;
+  font-size: 14px;
+  margin-bottom: 4px;
+}
+
+.map-popup-address {
+  color: #555;
+  font-size: 12px;
+  margin-bottom: 4px;
+}
+
+.map-popup-score {
+  font-size: 12px;
+  color: #333;
+}
+
+.map-popup-warning {
+  font-size: 11px;
+  color: #d97706;
+  margin-top: 4px;
+}

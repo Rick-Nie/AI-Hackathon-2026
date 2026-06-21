@@ -1,0 +1,126 @@
+.app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ============================================================================
+   Masthead — editorial sticky header
+   ============================================================================ */
+.masthead {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: var(--bg-glass);
+  backdrop-filter: blur(18px) saturate(140%);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+  border-bottom: 1px solid var(--line);
+}
+
+.masthead-inner {
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 16px 28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.masthead-brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  transition: opacity 0.3s var(--ease);
+}
+.masthead-brand:hover { opacity: 0.82; }
+
+.masthead-logo {
+  display: flex;
+  width: 52px;
+  height: 42px;
+  align-items: center;
+  justify-content: center;
+  filter: saturate(0.92);
+}
+.masthead-logo svg { width: 52px; height: 42px; }
+
+.masthead-words {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.masthead-words .eyebrow { font-size: 9.5px; letter-spacing: 0.26em; }
+
+.wordmark {
+  font-family: var(--font-serif);
+  font-size: 26px;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  color: var(--text);
+}
+.wordmark-accent {
+  color: var(--accent);
+  font-style: italic;
+}
+
+.masthead-meta {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.masthead-rule {
+  width: 28px;
+  height: 1px;
+  background: var(--line-2);
+}
+.masthead-coord {
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ============================================================================
+   Shell layout — sidebar + content
+   ============================================================================ */
+.shell {
+  max-width: 1440px;
+  margin: 0 auto;
+  width: 100%;
+  flex: 1;
+  display: flex;
+  gap: 28px;
+  padding: 32px 28px 56px;
+  align-items: flex-start;
+}
+
+.main-content {
+  flex: 1;
+  min-width: 0;
+  min-height: 60vh;
+}
+
+.chat-section {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 24px;
+  width: 100%;
+  align-items: start;
+}
+
+/* ── Responsive ── */
+@media (max-width: 1024px) {
+  .chat-section { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 768px) {
+  .masthead-inner { padding: 14px 18px; }
+  .masthead-coord { display: none; }
+  .shell {
+    flex-direction: column;
+    padding: 20px 16px 40px;
+    gap: 18px;
+  }
+  .wordmark { font-size: 22px; }
+}
