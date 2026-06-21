@@ -2,6 +2,24 @@
 
 A sophisticated hackathon project that uses AI to understand granular dietary preferences and match users with the most suitable restaurants.
 
+## 🌐 Live Demo
+
+![DietMate demo](docs/demo.gif)
+
+> _Record a ~15s clip of the app and save it as `docs/demo.gif` — see [Recording the demo GIF](#-recording-the-demo-gif) below. Until then, this image link will show as broken._
+
+> **Try it:** **https://dietmate.vercel.app** _(replace with your Vercel URL after deploying)_
+
+| Service | URL |
+|---|---|
+| 🖥️ Frontend (Vercel) | `https://<your-app>.vercel.app` |
+| ⚙️ Backend API (Render) | `https://<your-backend>.onrender.com` |
+| 📚 API docs (Swagger) | `https://<your-backend>.onrender.com/docs` |
+
+> ⏳ **Note:** the backend runs on Render's free tier, which sleeps after ~15 min of inactivity. The **first request may take ~50 seconds** to wake it up — after that it's fast. Give the chat or first search a moment on initial load.
+
+See [**Deploy Your Own**](#-deploy-your-own-live-demo) below for one-time setup (~10 min, free, no credit card).
+
 ## 🎯 Project Overview
 
 **Problem:** Current restaurant matching systems are insufficient for users with specific dietary needs, allergies, or preferences. They lack:
@@ -77,7 +95,7 @@ cp .env.example .env
 
 # Add your API keys to .env
 # ANTHROPIC_API_KEY=your_claude_api_key
-# YELP_API_KEY=your_yelp_api_key (optional, mock data works without it)
+# GOOGLE_PLACES_API_KEY=your_google_places_key (optional, mock data works without it)
 
 uvicorn main:app --reload
 # API runs at http://localhost:8000
@@ -97,6 +115,52 @@ npm run dev
 ```
 
 Visit `http://localhost:5173` in your browser. Backend must be running!
+
+## 🚢 Deploy Your Own Live Demo
+
+This repo includes deploy configs ([`render.yaml`](render.yaml) for the backend, [`frontend/vercel.json`](frontend/vercel.json) for the frontend). Both platforms have free tiers — no credit card required.
+
+### Step 1 — Push to GitHub
+Make sure this project is in a GitHub repo (it is, if you cloned it).
+
+### Step 2 — Deploy the backend to Render
+1. Go to [render.com](https://render.com) → sign up with GitHub (free).
+2. Click **New → Blueprint**, pick this repo. Render reads `render.yaml` automatically.
+3. When prompted, set the environment variables:
+   - `ANTHROPIC_API_KEY` → your Claude API key (required for the chatbot)
+   - `GOOGLE_PLACES_API_KEY` → optional (mock restaurant data is used if omitted)
+4. Click **Apply**. Wait for the build, then copy your backend URL, e.g. `https://dietmate-backend.onrender.com`.
+5. Verify it works: open `https://<your-backend>.onrender.com/health` → should show `{"status":"ok"}`.
+
+### Step 3 — Deploy the frontend to Vercel
+1. Go to [vercel.com](https://vercel.com) → sign up with GitHub (free).
+2. Click **Add New → Project**, import this repo.
+3. Set **Root Directory** to `frontend`.
+4. Under **Environment Variables**, add:
+   - `VITE_API_URL` → your Render backend URL from Step 2 (e.g. `https://dietmate-backend.onrender.com`)
+5. Click **Deploy**. Copy your live URL, e.g. `https://dietmate.vercel.app`.
+
+### Step 4 — Update this README
+Paste your two URLs into the [Live Demo](#-live-demo) section at the top. Done! 🎉
+
+> **CORS:** the backend already allows all origins, so the Vercel frontend can call the Render backend out of the box.
+>
+> **Build note:** `frontend/vercel.json` uses `vite build` (not `tsc && vite build`) so the production demo deploys even if there are non-fatal TypeScript warnings. Run `npm run build` locally if you want the full strict typecheck.
+
+## 🎬 Recording the demo GIF
+
+The README embeds `docs/demo.gif`. To create it (Windows, ~2 min):
+
+1. Start both servers locally (backend `run.bat`, frontend `npm run dev`).
+2. Install **[ScreenToGif](https://www.screentogif.com/)** (free) — or use the Xbox Game Bar (`Win+G`) to record an MP4 and convert it.
+3. Record a short flow that shows off the app, e.g.:
+   - Type in chat: *"I love pizza, no allergies, I'm near UC Berkeley"*
+   - Click **Search Restaurants**
+   - Show the results cards, then the **Map** tab with pins
+4. Trim to ~10–15 seconds, export as a GIF.
+5. Save it as `docs/demo.gif` (overwrite the placeholder), commit, and push.
+
+**Tips:** keep it under ~10 MB so it loads fast on GitHub; a 800–1000px wide capture looks crisp without being huge. For a higher-quality option, you can embed an MP4 by uploading it to the GitHub issue/PR drag-and-drop and pasting the resulting link instead.
 
 ## 📊 API Endpoints
 
