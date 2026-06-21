@@ -249,7 +249,11 @@ Return ONLY valid JSON:
 
     try:
         client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
-        response = client.messages.create(
+        # The Anthropic SDK call is synchronous/blocking. Run it in a worker
+        # thread so the ~20 gathered analyses actually execute concurrently
+        # instead of serializing on the event loop (was ~40s, now ~3-4s).
+        response = await asyncio.to_thread(
+            client.messages.create,
             model="claude-haiku-4-5-20251001",
             max_tokens=600,
             messages=[{"role": "user", "content": prompt}],

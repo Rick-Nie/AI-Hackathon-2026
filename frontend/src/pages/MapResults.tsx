@@ -1,6 +1,5 @@
-import { useEffect, useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import { GoogleMap, useJsApiLoader, Marker, InfoWindow } from '@react-google-maps/api'
-import { api } from '../api'
 import { UserPreferences, Restaurant } from '../types'
 import { MapPin, Phone, Globe, Star, ChevronDown, ChevronUp } from 'lucide-react'
 import './MapResults.css'
@@ -8,6 +7,27 @@ import './MapResults.css'
 const GOOGLE_MAPS_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || ''
 
 const MAP_CONTAINER_STYLE = { height: '100%', width: '100%' }
+
+/* Dark cinematic map theme — warm-neutral to match the app's amber/charcoal palette */
+const DARK_MAP_STYLE: google.maps.MapTypeStyle[] = [
+  { elementType: 'geometry', stylers: [{ color: '#15130f' }] },
+  { elementType: 'labels.text.stroke', stylers: [{ color: '#15130f' }] },
+  { elementType: 'labels.text.fill', stylers: [{ color: '#9a9183' }] },
+  { elementType: 'labels.icon', stylers: [{ visibility: 'off' }] },
+  { featureType: 'administrative', elementType: 'geometry', stylers: [{ color: '#3a352c' }] },
+  { featureType: 'administrative.land_parcel', stylers: [{ visibility: 'off' }] },
+  { featureType: 'poi', elementType: 'labels.text.fill', stylers: [{ color: '#6b6457' }] },
+  { featureType: 'poi.park', elementType: 'geometry', stylers: [{ color: '#1c2418' }] },
+  { featureType: 'poi.park', elementType: 'labels.text.fill', stylers: [{ color: '#4f5c44' }] },
+  { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#26231d' }] },
+  { featureType: 'road', elementType: 'labels.text.fill', stylers: [{ color: '#8a8274' }] },
+  { featureType: 'road.arterial', elementType: 'geometry', stylers: [{ color: '#2e2a22' }] },
+  { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#3d3527' }] },
+  { featureType: 'road.highway', elementType: 'labels.text.fill', stylers: [{ color: '#c9a26a' }] },
+  { featureType: 'transit', elementType: 'geometry', stylers: [{ color: '#2a2620' }] },
+  { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#0c1116' }] },
+  { featureType: 'water', elementType: 'labels.text.fill', stylers: [{ color: '#41506b' }] },
+]
 
 function scoreColor(score: number): string {
   if (score >= 75) return '#10b981'
@@ -71,15 +91,22 @@ function markerUrl(score: number, selected: boolean): string {
 
 interface Props {
   preferences: UserPreferences
+  restaurants: Restaurant[]
+  loading: boolean
+  error: string | null
   onLocationSaved?: (lat: number, lon: number, label: string) => void
 }
 
-export default function MapResults({ preferences, onLocationSaved }: Props) {
+export default function MapResults({
+  preferences,
+  restaurants,
+  loading,
+  error,
+  onLocationSaved,
+}: Props) {
   const { isLoaded, loadError } = useJsApiLoader({ googleMapsApiKey: GOOGLE_MAPS_KEY })
 
-  const [restaurants, setRestaurants] = useState<Restaurant[]>([])
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [geoError, setGeoError] = useState<string | null>(null)
   const [locating, setLocating] = useState(false)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [infoOpen, setInfoOpen] = useState<string | null>(null)
@@ -95,34 +122,28 @@ export default function MapResults({ preferences, onLocationSaved }: Props) {
     ? { lat: preferences.latitude!, lng: preferences.longitude! }
     : { lat: 37.7749, lng: -122.4194 }
 
+  // Search results are prefetched at the App level (useRestaurantSearch) and
+  // passed in as props, so switching to Discover is instant.
+
+  const displayError = error || geoError
+
+  // Frame the map to fit every restaurant marker (plus the user pin) whenever
+  // results load, so pins are never left off-screen if the map centered elsewhere.
   useEffect(() => {
-    if (!hasLocation) return
-    let cancelled = false
-    const load = async () => {
-      setLoading(true)
-      setError(null)
-      try {
-        const res = await api.searchRestaurantsGoogle({
-          preferences,
-          latitude: preferences.latitude!,
-          longitude: preferences.longitude!,
-          radius_meters: 2000,
-          limit: 30,
-        })
-        if (!cancelled) setRestaurants(res.restaurants)
-      } catch {
-        if (!cancelled) setError('Could not load restaurants from Google Places.')
-      } finally {
-        if (!cancelled) setLoading(false)
-      }
+    if (!mapRef || !window.google) return
+    const pts = restaurants.filter((r) => r.latitude != null && r.longitude != null)
+    if (pts.length === 0) return
+    const bounds = new window.google.maps.LatLngBounds()
+    if (preferences.latitude != null && preferences.longitude != null) {
+      bounds.extend({ lat: preferences.latitude, lng: preferences.longitude })
     }
-    load()
-    return () => { cancelled = true }
-  }, [preferences.latitude, preferences.longitude])
+    pts.forEach((r) => bounds.extend({ lat: r.latitude as number, lng: r.longitude as number }))
+    mapRef.fitBounds(bounds, 64)
+  }, [mapRef, restaurants, preferences.latitude, preferences.longitude])
 
   const handleSaveLocation = async () => {
-    if (!('geolocation' in navigator)) { setError('Geolocation not supported.'); return }
-    setLocating(true); setError(null)
+    if (!('geolocation' in navigator)) { setGeoError('Geolocation not supported.'); return }
+    setLocating(true); setGeoError(null)
     try {
       const pos = await new Promise<GeolocationPosition>((res, rej) =>
         navigator.geolocation.getCurrentPosition(res, rej, { enableHighAccuracy: true, timeout: 10000 })
@@ -135,7 +156,7 @@ export default function MapResults({ preferences, onLocationSaved }: Props) {
         label = d.address?.city || d.address?.town || d.address?.county || label
       } catch {}
       onLocationSaved?.(latitude, longitude, label)
-    } catch { setError('Could not get location. Check browser permissions.') }
+    } catch { setGeoError('Could not get location. Check browser permissions.') }
     finally { setLocating(false) }
   }
 
@@ -194,7 +215,7 @@ export default function MapResults({ preferences, onLocationSaved }: Props) {
           <div className="mr-placeholder-icon">📍</div>
           <h2>Save Your Location</h2>
           <p>Allow DietMate67 to detect your location and find nearby restaurants on Google Maps.</p>
-          {error && <p className="mr-error-text">{error}</p>}
+          {displayError && <p className="mr-error-text">{displayError}</p>}
           <button className="mr-locate-btn" onClick={handleSaveLocation} disabled={locating}>
             {locating ? 'Detecting…' : 'Use My Location'}
           </button>
@@ -217,7 +238,7 @@ export default function MapResults({ preferences, onLocationSaved }: Props) {
             {loading ? 'Loading restaurants…' : `${visibleRestaurants.length}${activeFoodFilters.size > 0 || compatibleOnly ? ` of ${restaurants.length}` : ''} Restaurants`}
           </h2>
           {preferences.location && <p className="mr-list-loc">📍 {preferences.location}</p>}
-          {error && <p className="mr-error-text">{error}</p>}
+          {displayError && <p className="mr-error-text">{displayError}</p>}
           {loading && <div className="mr-spinner" />}
 
           {/* Filter bar — shown once restaurants load */}
@@ -396,7 +417,13 @@ export default function MapResults({ preferences, onLocationSaved }: Props) {
             center={userCenter}
             zoom={15}
             onLoad={(map) => setMapRef(map)}
-            options={{ streetViewControl: false, mapTypeControl: false, fullscreenControl: true }}
+            options={{
+              streetViewControl: false,
+              mapTypeControl: false,
+              fullscreenControl: true,
+              styles: DARK_MAP_STYLE,
+              backgroundColor: '#15130f',
+            }}
           >
             {/* user location pin */}
             <Marker
