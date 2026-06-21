@@ -89,12 +89,19 @@ async def chat_endpoint(request: ChatRequest):
     )
 
 
+from pydantic import BaseModel as _BaseModel
+
+class AllergenCheckRequest(_BaseModel):
+    dish_name: str
+    ingredients: list[str]
+    user_allergens: list[str]
+
+
 @app.post("/allergen-check")
-async def allergen_check(
-    dish_name: str,
-    ingredients: list[str],
-    user_allergens: list[str],
-):
+async def allergen_check(request: AllergenCheckRequest):
+    dish_name = request.dish_name
+    ingredients = request.ingredients
+    user_allergens = request.user_allergens
     """
     Deterministic allergen check for a single dish.
     Returns structured safety result — never uses LLM inference.

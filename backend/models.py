@@ -93,7 +93,7 @@ class MenuItem(BaseModel):
 
 
 class AllergenSafetyReport(BaseModel):
-    overall_risk: str
+    overall_risk: str | dict
     is_safe: bool
     safety_score: int = Field(description="0-100, higher is safer")
     unsafe_items: list[str] = Field(default_factory=list)

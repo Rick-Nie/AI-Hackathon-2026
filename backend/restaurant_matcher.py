@@ -1,18 +1,13 @@
 """
-Restaurant search and dietary matching logic.
-Uses Yelp Fusion API for restaurant data. Falls back to mock data if no API key.
+Restaurant search using OpenStreetMap Overpass API (free, no key required).
+Dietary/allergen analysis is deterministic — never LLM-based.
 """
 
-import os
-import math
 import httpx
+import math
 from typing import Optional
 
-from allergens import (
-    check_dish_for_allergens,
-    score_restaurant_allergen_safety,
-    RiskLevel,
-)
+from allergens import score_restaurant_allergen_safety, RiskLevel
 from models import (
     UserPreferences,
     RestaurantMatch,
@@ -23,34 +18,8 @@ from models import (
     CuisineType,
 )
 
-YELP_API_BASE = "https://api.yelp.com/v3"
-YELP_API_KEY = os.getenv("YELP_API_KEY", "")
-
-# Map our DietaryStyle to Yelp category aliases
-DIETARY_STYLE_TO_YELP_CATEGORIES: dict[str, list[str]] = {
-    DietaryStyle.VEGAN: ["vegan"],
-    DietaryStyle.VEGETARIAN: ["vegetarian"],
-    DietaryStyle.HALAL: ["halal"],
-    DietaryStyle.KOSHER: ["kosher"],
-}
-
-# Map CuisineType to Yelp category aliases
-CUISINE_TO_YELP: dict[str, str] = {
-    CuisineType.ITALIAN: "italian",
-    CuisineType.CHINESE: "chinese",
-    CuisineType.JAPANESE: "japanese",
-    CuisineType.MEXICAN: "mexican",
-    CuisineType.INDIAN: "indpak",
-    CuisineType.THAI: "thai",
-    CuisineType.MEDITERRANEAN: "mediterranean",
-    CuisineType.AMERICAN: "newamerican",
-    CuisineType.FRENCH: "french",
-    CuisineType.KOREAN: "korean",
-    CuisineType.VIETNAMESE: "vietnamese",
-    CuisineType.GREEK: "greek",
-    CuisineType.MIDDLE_EASTERN: "mideastern",
-    CuisineType.ETHIOPIAN: "ethiopian",
-}
+OVERPASS_URL = "https://overpass-api.de/api/interpreter"
+NOMINATIM_URL = "https://nominatim.openstreetmap.org/search"
 
 # Dietary style incompatible ingredients (for menu-level checking)
 DIETARY_EXCLUSIONS: dict[str, list[str]] = {
@@ -83,81 +52,138 @@ DIETARY_EXCLUSIONS: dict[str, list[str]] = {
     ],
 }
 
+# OSM cuisine tag → our CuisineType
+OSM_CUISINE_MAP: dict[str, CuisineType] = {
+    "italian": CuisineType.ITALIAN,
+    "pizza": CuisineType.ITALIAN,
+    "chinese": CuisineType.CHINESE,
+    "japanese": CuisineType.JAPANESE,
+    "sushi": CuisineType.JAPANESE,
+    "ramen": CuisineType.JAPANESE,
+    "mexican": CuisineType.MEXICAN,
+    "indian": CuisineType.INDIAN,
+    "thai": CuisineType.THAI,
+    "mediterranean": CuisineType.MEDITERRANEAN,
+    "american": CuisineType.AMERICAN,
+    "burger": CuisineType.AMERICAN,
+    "french": CuisineType.FRENCH,
+    "korean": CuisineType.KOREAN,
+    "vietnamese": CuisineType.VIETNAMESE,
+    "greek": CuisineType.GREEK,
+    "middle_eastern": CuisineType.MIDDLE_EASTERN,
+    "lebanese": CuisineType.MIDDLE_EASTERN,
+    "turkish": CuisineType.MIDDLE_EASTERN,
+    "ethiopian": CuisineType.ETHIOPIAN,
+}
 
-async def search_restaurants(
-    preferences: UserPreferences,
-    limit: int = 10,
-) -> list[RestaurantMatch]:
-    """Search Yelp and return matched + scored restaurants."""
-    if not YELP_API_KEY:
-        return _mock_restaurants(preferences, limit)
 
-    raw = await _yelp_search(preferences, limit * 2)  # fetch extra to allow filtering
-    matches = []
-    for r in raw:
-        match = await _build_restaurant_match(r, preferences)
-        if match:
-            matches.append(match)
-
-    matches.sort(key=lambda x: x.match_score, reverse=True)
-    return matches[:limit]
-
-
-async def _yelp_search(preferences: UserPreferences, limit: int) -> list[dict]:
-    location = preferences.location or "San Francisco, CA"
-    categories = _build_yelp_categories(preferences)
-    params = {
-        "location": location,
-        "limit": min(limit, 50),
-        "sort_by": "best_match",
-        "open_now": preferences.requires_open_now,
-    }
-    if categories:
-        params["categories"] = ",".join(categories)
-    if preferences.preferred_price_range:
-        price_map = {"$": "1", "$$": "2", "$$$": "3", "$$$$": "4"}
-        price_val = price_map.get(preferences.preferred_price_range)
-        if price_val:
-            params["price"] = price_val
-
-    async with httpx.AsyncClient() as client:
+async def geocode_location(location: str) -> Optional[tuple[float, float]]:
+    """Convert a location string to (lat, lon) using Nominatim."""
+    async with httpx.AsyncClient(headers={"User-Agent": "DietMate/1.0"}) as client:
         resp = await client.get(
-            f"{YELP_API_BASE}/businesses/search",
-            headers={"Authorization": f"Bearer {YELP_API_KEY}"},
-            params=params,
+            NOMINATIM_URL,
+            params={"q": location, "format": "json", "limit": 1},
             timeout=10.0,
         )
         resp.raise_for_status()
+        results = resp.json()
+        if not results:
+            return None
+        return float(results[0]["lat"]), float(results[0]["lon"])
+
+
+async def overpass_restaurants(
+    lat: float,
+    lon: float,
+    radius_meters: int = 2000,
+    limit: int = 50,
+) -> list[dict]:
+    """Query OpenStreetMap Overpass API for restaurants near a coordinate."""
+    query = f"""
+[out:json][timeout:25];
+(
+  node["amenity"="restaurant"](around:{radius_meters},{lat},{lon});
+  node["amenity"="cafe"](around:{radius_meters},{lat},{lon});
+  node["amenity"="fast_food"](around:{radius_meters},{lat},{lon});
+  way["amenity"="restaurant"](around:{radius_meters},{lat},{lon});
+  way["amenity"="cafe"](around:{radius_meters},{lat},{lon});
+);
+out center {limit};
+"""
+    async with httpx.AsyncClient(headers={"User-Agent": "DietMate/1.0"}) as client:
+        resp = await client.post(OVERPASS_URL, data={"data": query}, timeout=30.0)
+        resp.raise_for_status()
         data = resp.json()
-        return data.get("businesses", [])
+        return data.get("elements", [])
 
 
-async def _build_restaurant_match(
-    raw: dict, preferences: UserPreferences
+def _haversine_miles(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    R = 3958.8  # Earth radius in miles
+    dlat = math.radians(lat2 - lat1)
+    dlon = math.radians(lon2 - lon1)
+    a = math.sin(dlat / 2) ** 2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dlon / 2) ** 2
+    return R * 2 * math.asin(math.sqrt(a))
+
+
+def _osm_to_match(
+    element: dict,
+    user_lat: float,
+    user_lon: float,
+    preferences: UserPreferences,
 ) -> Optional[RestaurantMatch]:
-    location_data = raw.get("location", {})
-    address = ", ".join(filter(None, [
-        location_data.get("address1"),
-        location_data.get("city"),
-        location_data.get("state"),
-        location_data.get("zip_code"),
-    ]))
+    tags = element.get("tags", {})
+    name = tags.get("name") or tags.get("brand")
+    if not name:
+        return None
 
-    categories = [c.get("title", "") for c in raw.get("categories", [])]
+    # Coordinates
+    if element["type"] == "node":
+        lat, lon = element.get("lat", 0.0), element.get("lon", 0.0)
+    else:
+        center = element.get("center", {})
+        lat, lon = center.get("lat", 0.0), center.get("lon", 0.0)
 
-    # Fetch menu details if available (Yelp doesn't always have this)
-    menu_items = await _fetch_menu_items(raw.get("id", ""), categories)
+    distance_miles = _haversine_miles(user_lat, user_lon, lat, lon)
+    if distance_miles > preferences.max_distance_miles:
+        return None
 
-    # Allergen safety analysis (deterministic)
+    # Build address
+    address_parts = filter(None, [
+        tags.get("addr:housenumber"),
+        tags.get("addr:street"),
+        tags.get("addr:city"),
+        tags.get("addr:state"),
+        tags.get("addr:postcode"),
+    ])
+    address = " ".join(address_parts) or f"Near ({lat:.4f}, {lon:.4f})"
+
+    # Cuisine types
+    raw_cuisine = tags.get("cuisine", "")
+    cuisine_labels = [c.strip() for c in raw_cuisine.split(";") if c.strip()]
+    cuisine_types = [c.replace("_", " ").title() for c in cuisine_labels]
+
+    # OSM dietary tags → check compatibility
+    osm_diet_tags = {
+        "diet:vegan": tags.get("diet:vegan", ""),
+        "diet:vegetarian": tags.get("diet:vegetarian", ""),
+        "diet:halal": tags.get("diet:halal", ""),
+        "diet:kosher": tags.get("diet:kosher", ""),
+        "diet:gluten_free": tags.get("diet:gluten_free", ""),
+    }
+
+    # Get menu items based on cuisine (realistic mock — OSM has no menu data)
+    menu_items = _mock_menu_for_cuisine(cuisine_labels)
+
+    # Allergen safety (deterministic)
     allergen_report = None
-    safe_items = []
-    if preferences.allergens and menu_items:
-        raw_items = [{"name": item.name, "ingredients": item.ingredients} for item in menu_items]
+    safe_items = menu_items
+    if preferences.allergens:
+        raw_items = [{"name": i.name, "ingredients": i.ingredients} for i in menu_items]
         scored = score_restaurant_allergen_safety(preferences.allergens, raw_items)
+        safe_results = [r for r in scored["item_results"] if r.is_safe]
+        safe_items = [i for i in menu_items if any(s.dish_name == i.name for s in safe_results)]
         unsafe = [r for r in scored["item_results"] if r.overall_risk == RiskLevel.UNSAFE]
         high_risk = [r for r in scored["item_results"] if r.overall_risk == RiskLevel.HIGH_RISK]
-        safe_results = [r for r in scored["item_results"] if r.is_safe]
-        safe_items = [item for item in menu_items if any(s.dish_name == item.name for s in safe_results)]
 
         warnings = []
         if unsafe:
@@ -176,45 +202,59 @@ async def _build_restaurant_match(
             warnings=warnings,
         )
 
+        # Filter out clearly unsafe restaurants
+        if allergen_report.safety_score < 20:
+            return None
+
     # Dietary compatibility
-    dietary_report = _check_dietary_compatibility(preferences, categories, menu_items)
+    dietary_report = _check_dietary_compatibility(
+        preferences, cuisine_labels, menu_items, osm_diet_tags
+    )
 
-    # Scoring
-    score, reasons = _compute_match_score(raw, preferences, allergen_report, dietary_report)
+    # Match score
+    score, reasons = _compute_match_score(
+        name, distance_miles, preferences, allergen_report, dietary_report, tags
+    )
 
-    # Filter out restaurants that are clearly unsafe for allergen users
-    if preferences.allergens and allergen_report and allergen_report.safety_score < 20:
-        return None
-
-    distance = raw.get("distance")
-    distance_miles = round(distance / 1609.34, 2) if distance else None
+    phone = tags.get("phone") or tags.get("contact:phone")
+    website = tags.get("website") or tags.get("contact:website")
 
     return RestaurantMatch(
-        yelp_id=raw.get("id", ""),
-        name=raw.get("name", ""),
-        rating=raw.get("rating", 0.0),
-        review_count=raw.get("review_count", 0),
-        price_range=raw.get("price"),
-        cuisine_types=categories,
+        yelp_id=f"osm-{element['type']}-{element['id']}",
+        name=name,
+        rating=0.0,  # OSM has no ratings
+        review_count=0,
+        price_range=_osm_price(tags.get("price_range") or tags.get("stars")),
+        cuisine_types=cuisine_types,
         address=address,
-        distance_miles=distance_miles,
-        phone=raw.get("display_phone"),
-        url=raw.get("url"),
-        is_open_now=not raw.get("is_closed", True),
-        image_url=raw.get("image_url"),
+        distance_miles=round(distance_miles, 2),
+        phone=phone,
+        url=website,
+        is_open_now=None,  # would need opening_hours parsing
         allergen_safety=allergen_report,
         dietary_compatibility=dietary_report,
-        safe_menu_items=safe_items[:10],
+        safe_menu_items=safe_items[:8],
         match_score=score,
         match_reasons=reasons,
         warnings=allergen_report.warnings if allergen_report else [],
     )
 
 
+def _osm_price(raw: Optional[str]) -> Optional[str]:
+    if not raw:
+        return None
+    try:
+        n = int(raw)
+        return "$" * min(n, 4)
+    except (ValueError, TypeError):
+        return raw if raw in ("$", "$$", "$$$", "$$$$") else None
+
+
 def _check_dietary_compatibility(
     preferences: UserPreferences,
-    restaurant_categories: list[str],
+    cuisine_labels: list[str],
     menu_items: list[MenuItem],
+    osm_diet_tags: dict,
 ) -> DietaryCompatibilityReport:
     compatible = []
     incompatible = []
@@ -227,6 +267,19 @@ def _check_dietary_compatibility(
     ingredient_text = " ".join(ingredient_pool)
 
     for style in preferences.dietary_styles:
+        # OSM diet tag takes priority
+        osm_key = f"diet:{style.value}"
+        osm_val = osm_diet_tags.get(osm_key, "")
+        if osm_val in ("yes", "only"):
+            compatible.append(style.value)
+            notes.append(f"Restaurant tagged as {style.value}-friendly (OSM)")
+            continue
+        if osm_val == "no":
+            incompatible.append(style.value)
+            notes.append(f"Restaurant tagged as NOT {style.value}-friendly (OSM)")
+            continue
+
+        # Fall back to ingredient analysis
         exclusions = DIETARY_EXCLUSIONS.get(style, [])
         violations = [e for e in exclusions if e in ingredient_text]
         if violations:
@@ -239,16 +292,15 @@ def _check_dietary_compatibility(
         if disliked.lower() in ingredient_text:
             disliked_found.append(disliked)
 
-    preferred_cat_lower = [c.value for c in preferences.preferred_cuisines]
+    # Cuisine preference match
+    preferred_vals = [c.value for c in preferences.preferred_cuisines]
     cuisine_match = any(
-        any(pref in cat.lower() for pref in preferred_cat_lower)
-        for cat in restaurant_categories
+        any(pref in label.lower() for pref in preferred_vals)
+        for label in cuisine_labels
     )
 
-    is_compatible = len(incompatible) == 0
-
     return DietaryCompatibilityReport(
-        is_compatible=is_compatible,
+        is_compatible=len(incompatible) == 0,
         compatible_styles=compatible,
         incompatible_styles=incompatible,
         disliked_ingredients_found=disliked_found,
@@ -258,43 +310,56 @@ def _check_dietary_compatibility(
 
 
 def _compute_match_score(
-    raw: dict,
+    name: str,
+    distance_miles: float,
     preferences: UserPreferences,
     allergen_report: Optional[AllergenSafetyReport],
     dietary_report: Optional[DietaryCompatibilityReport],
+    tags: dict,
 ) -> tuple[float, list[str]]:
     score = 0.0
     reasons = []
 
-    # Base: Yelp rating (0-40 pts)
-    rating = raw.get("rating", 0.0)
-    score += (rating / 5.0) * 40
-    reasons.append(f"Rated {rating}/5")
+    # Distance score (0-30 pts): closer is better
+    if distance_miles <= 0.5:
+        score += 30
+        reasons.append(f"{distance_miles:.1f} mi away (very close)")
+    elif distance_miles <= 1.5:
+        score += 20
+        reasons.append(f"{distance_miles:.1f} mi away")
+    elif distance_miles <= 3.0:
+        score += 10
+        reasons.append(f"{distance_miles:.1f} mi away")
 
-    # Allergen safety (0-30 pts)
+    # Allergen safety (0-35 pts)
     if allergen_report:
-        safety_pts = (allergen_report.safety_score / 100.0) * 30
+        safety_pts = (allergen_report.safety_score / 100.0) * 35
         score += safety_pts
-        if allergen_report.safety_score >= 80:
-            reasons.append(f"High allergen safety ({allergen_report.safety_score}%)")
-        elif allergen_report.safety_score >= 60:
-            reasons.append(f"Moderate allergen safety ({allergen_report.safety_score}%)")
+        label = (
+            "High" if allergen_report.safety_score >= 80
+            else "Moderate" if allergen_report.safety_score >= 60
+            else "Low"
+        )
+        reasons.append(f"{label} allergen safety ({allergen_report.safety_score}%)")
 
-    # Dietary compatibility (0-15 pts)
+    # Dietary compatibility (0-20 pts)
     if dietary_report:
         if dietary_report.is_compatible:
-            score += 15
+            score += 20
             reasons.append("Matches your dietary style")
         if dietary_report.preferred_cuisine_match:
             score += 10
             reasons.append("Your preferred cuisine type")
 
-    # Price match (0-10 pts)
-    if preferences.preferred_price_range and raw.get("price") == preferences.preferred_price_range:
-        score += 10
-        reasons.append(f"Matches budget ({raw['price']})")
+    # OSM quality signals (0-5 pts)
+    if tags.get("website") or tags.get("contact:website"):
+        score += 2
+    if tags.get("phone") or tags.get("contact:phone"):
+        score += 2
+    if tags.get("opening_hours"):
+        score += 1
 
-    # Disliked ingredients penalty
+    # Disliked ingredient penalty
     if dietary_report and dietary_report.disliked_ingredients_found:
         penalty = len(dietary_report.disliked_ingredients_found) * 3
         score = max(0, score - penalty)
@@ -302,28 +367,9 @@ def _compute_match_score(
     return round(min(score, 100), 1), reasons
 
 
-def _build_yelp_categories(preferences: UserPreferences) -> list[str]:
-    cats = []
-    for style in preferences.dietary_styles:
-        cats.extend(DIETARY_STYLE_TO_YELP_CATEGORIES.get(style, []))
-    for cuisine in preferences.preferred_cuisines:
-        yelp_cat = CUISINE_TO_YELP.get(cuisine)
-        if yelp_cat:
-            cats.append(yelp_cat)
-    return list(set(cats)) or ["restaurants"]
-
-
-async def _fetch_menu_items(restaurant_id: str, categories: list[str]) -> list[MenuItem]:
-    """
-    In a real implementation this would call a menu API (e.g., Yelp menu endpoint,
-    Locu, SinglePlatform). For now we return realistic mock items based on cuisine type.
-    """
-    return _mock_menu_for_cuisine(categories)
-
-
-def _mock_menu_for_cuisine(categories: list[str]) -> list[MenuItem]:
-    cat_lower = " ".join(categories).lower()
-    if "italian" in cat_lower:
+def _mock_menu_for_cuisine(cuisine_labels: list[str]) -> list[MenuItem]:
+    joined = " ".join(cuisine_labels).lower()
+    if "italian" in joined or "pizza" in joined:
         return [
             MenuItem(name="Spaghetti Carbonara", ingredients=["pasta", "eggs", "parmesan cheese", "pancetta", "black pepper"]),
             MenuItem(name="Margherita Pizza", ingredients=["wheat flour", "tomato sauce", "mozzarella cheese", "basil"]),
@@ -331,7 +377,7 @@ def _mock_menu_for_cuisine(categories: list[str]) -> list[MenuItem]:
             MenuItem(name="Bruschetta", ingredients=["bread", "tomato", "garlic", "basil", "olive oil"]),
             MenuItem(name="Caesar Salad", ingredients=["romaine lettuce", "parmesan", "croutons", "caesar dressing", "anchovies"]),
         ]
-    if "japanese" in cat_lower or "sushi" in cat_lower:
+    if "japanese" in joined or "sushi" in joined or "ramen" in joined:
         return [
             MenuItem(name="Salmon Sashimi", ingredients=["salmon", "soy sauce", "wasabi", "ginger"]),
             MenuItem(name="Vegetable Tempura", ingredients=["broccoli", "sweet potato", "zucchini", "wheat flour", "egg", "sesame oil"]),
@@ -339,62 +385,99 @@ def _mock_menu_for_cuisine(categories: list[str]) -> list[MenuItem]:
             MenuItem(name="Edamame", ingredients=["edamame", "sea salt"]),
             MenuItem(name="Avocado Roll", ingredients=["rice", "nori", "avocado", "sesame seeds"]),
         ]
-    if "mexican" in cat_lower:
+    if "mexican" in joined:
         return [
             MenuItem(name="Bean Burrito", ingredients=["flour tortilla", "black beans", "rice", "cheese", "sour cream", "salsa"]),
             MenuItem(name="Chicken Tacos", ingredients=["corn tortilla", "grilled chicken", "onion", "cilantro", "lime"]),
             MenuItem(name="Guacamole", ingredients=["avocado", "lime", "onion", "cilantro", "jalapeño", "tomato"]),
             MenuItem(name="Fish Tacos", ingredients=["corn tortilla", "tilapia", "cabbage", "pico de gallo", "crema"]),
         ]
-    # Default generic menu
+    if "indian" in joined:
+        return [
+            MenuItem(name="Dal Tadka", ingredients=["lentils", "onion", "tomato", "garlic", "cumin", "ghee"]),
+            MenuItem(name="Paneer Tikka", ingredients=["paneer", "yogurt", "spices", "bell pepper", "onion"]),
+            MenuItem(name="Chana Masala", ingredients=["chickpeas", "onion", "tomato", "ginger", "garlic", "spices"]),
+            MenuItem(name="Butter Chicken", ingredients=["chicken", "butter", "cream", "tomato", "spices"]),
+            MenuItem(name="Garlic Naan", ingredients=["wheat flour", "yogurt", "garlic", "butter"]),
+        ]
+    if "chinese" in joined:
+        return [
+            MenuItem(name="Vegetable Stir Fry", ingredients=["broccoli", "bell pepper", "carrot", "soy sauce", "garlic", "sesame oil"]),
+            MenuItem(name="Kung Pao Chicken", ingredients=["chicken", "peanuts", "chili", "soy sauce", "vinegar"]),
+            MenuItem(name="Steamed Dumplings", ingredients=["wheat flour", "pork", "cabbage", "ginger", "sesame oil"]),
+            MenuItem(name="Hot and Sour Soup", ingredients=["tofu", "egg", "mushroom", "vinegar", "white pepper"]),
+        ]
+    if "vegan" in joined or "vegetarian" in joined:
+        return [
+            MenuItem(name="Buddha Bowl", ingredients=["quinoa", "roasted vegetables", "chickpeas", "tahini", "lemon"]),
+            MenuItem(name="Lentil Soup", ingredients=["lentils", "carrot", "celery", "onion", "cumin", "olive oil"]),
+            MenuItem(name="Mushroom Burger", ingredients=["portobello mushroom", "whole wheat bun", "lettuce", "tomato", "avocado"]),
+            MenuItem(name="Smoothie Bowl", ingredients=["banana", "berries", "oat milk", "granola", "chia seeds"]),
+        ]
+    # Generic fallback
     return [
         MenuItem(name="Garden Salad", ingredients=["lettuce", "tomato", "cucumber", "carrot", "olive oil", "vinegar"]),
         MenuItem(name="Grilled Chicken", ingredients=["chicken breast", "herbs", "olive oil", "garlic"]),
         MenuItem(name="Veggie Burger", ingredients=["black bean patty", "wheat bun", "lettuce", "tomato", "onion"]),
         MenuItem(name="Pasta Primavera", ingredients=["pasta", "vegetables", "olive oil", "garlic", "parmesan"]),
+        MenuItem(name="Tomato Soup", ingredients=["tomato", "onion", "garlic", "basil", "cream"]),
     ]
 
 
-def _mock_restaurants(preferences: UserPreferences, limit: int) -> list[RestaurantMatch]:
-    """Returns mock restaurant data when no Yelp API key is configured."""
-    from models import AllergenSafetyReport, DietaryCompatibilityReport
+async def search_restaurants(
+    preferences: UserPreferences,
+    limit: int = 10,
+) -> list[RestaurantMatch]:
+    """
+    Search OpenStreetMap for nearby restaurants and score them against user preferences.
+    Falls back to mock data if geocoding fails or no results found.
+    """
+    location = preferences.location or "San Francisco, CA"
 
+    # Geocode
+    coords = await geocode_location(location)
+    if not coords:
+        return _fallback_mock_restaurants(preferences, limit, location)
+
+    user_lat, user_lon = coords
+    radius_meters = int(preferences.max_distance_miles * 1609.34)
+
+    # Fetch from OSM
+    try:
+        elements = await overpass_restaurants(user_lat, user_lon, radius_meters, limit=limit * 3)
+    except Exception:
+        return _fallback_mock_restaurants(preferences, limit, location)
+
+    if not elements:
+        return _fallback_mock_restaurants(preferences, limit, location)
+
+    # Build and score matches
+    matches = []
+    for element in elements:
+        match = _osm_to_match(element, user_lat, user_lon, preferences)
+        if match:
+            matches.append(match)
+
+    matches.sort(key=lambda x: x.match_score, reverse=True)
+    return matches[:limit]
+
+
+def _fallback_mock_restaurants(
+    preferences: UserPreferences, limit: int, location: str
+) -> list[RestaurantMatch]:
+    """Demo-quality mock data when OSM is unavailable."""
     mocks = [
-        {
-            "id": "mock-1", "name": "Green Bowl Café", "rating": 4.5, "review_count": 320,
-            "price": "$$", "categories": ["Vegan", "Salads", "Healthy"],
-            "address": "123 Market St, San Francisco, CA",
-            "distance_miles": 0.4, "is_open_now": True,
-        },
-        {
-            "id": "mock-2", "name": "Tokyo Ramen House", "rating": 4.3, "review_count": 210,
-            "price": "$$", "categories": ["Japanese", "Ramen", "Noodles"],
-            "address": "456 Mission St, San Francisco, CA",
-            "distance_miles": 0.8, "is_open_now": True,
-        },
-        {
-            "id": "mock-3", "name": "The Allergen-Free Kitchen", "rating": 4.7, "review_count": 180,
-            "price": "$$$", "categories": ["Gluten-Free", "Vegan", "American"],
-            "address": "789 Valencia St, San Francisco, CA",
-            "distance_miles": 1.2, "is_open_now": True,
-        },
-        {
-            "id": "mock-4", "name": "Bella Italia", "rating": 4.1, "review_count": 450,
-            "price": "$$$", "categories": ["Italian", "Pizza", "Pasta"],
-            "address": "321 Columbus Ave, San Francisco, CA",
-            "distance_miles": 1.6, "is_open_now": False,
-        },
-        {
-            "id": "mock-5", "name": "Casa Mexico", "rating": 4.4, "review_count": 290,
-            "price": "$", "categories": ["Mexican", "Tacos", "Burritos"],
-            "address": "654 24th St, San Francisco, CA",
-            "distance_miles": 2.1, "is_open_now": True,
-        },
+        {"id": "mock-1", "name": "Green Bowl Café", "cuisines": ["vegan", "salads"], "address": f"123 Market St, {location}", "dist": 0.4},
+        {"id": "mock-2", "name": "Tokyo Ramen House", "cuisines": ["japanese", "ramen"], "address": f"456 Mission St, {location}", "dist": 0.8},
+        {"id": "mock-3", "name": "The Allergen-Free Kitchen", "cuisines": ["vegan", "american"], "address": f"789 Valencia St, {location}", "dist": 1.2},
+        {"id": "mock-4", "name": "Bella Italia", "cuisines": ["italian", "pizza"], "address": f"321 Columbus Ave, {location}", "dist": 1.6},
+        {"id": "mock-5", "name": "Casa Mexico", "cuisines": ["mexican"], "address": f"654 24th St, {location}", "dist": 2.1},
+        {"id": "mock-6", "name": "Spice Garden", "cuisines": ["indian"], "address": f"99 Curry Lane, {location}", "dist": 2.4},
     ]
 
     results = []
     for m in mocks[:limit]:
-        menu_items = _mock_menu_for_cuisine(m["categories"])
+        menu_items = _mock_menu_for_cuisine(m["cuisines"])
         raw_items = [{"name": i.name, "ingredients": i.ingredients} for i in menu_items]
 
         allergen_report = None
@@ -415,31 +498,34 @@ def _mock_restaurants(preferences: UserPreferences, limit: int) -> list[Restaura
                 total_item_count=scored["total_items"],
                 warnings=[f"{len(unsafe)} items contain your allergens"] if unsafe else [],
             )
+            if allergen_report.safety_score < 20:
+                continue
 
-        dietary_report = _check_dietary_compatibility(preferences, m["categories"], menu_items)
-        score_val = (m["rating"] / 5.0) * 40
+        dietary_report = _check_dietary_compatibility(
+            preferences, m["cuisines"], menu_items, {}
+        )
+
+        score_val = max(0.0, 30.0 - m["dist"] * 5)  # distance base
         if allergen_report:
-            score_val += (allergen_report.safety_score / 100.0) * 30
+            score_val += (allergen_report.safety_score / 100.0) * 35
         if dietary_report.is_compatible:
-            score_val += 15
+            score_val += 20
         if dietary_report.preferred_cuisine_match:
             score_val += 10
 
         results.append(RestaurantMatch(
             yelp_id=m["id"],
             name=m["name"],
-            rating=m["rating"],
-            review_count=m["review_count"],
-            price_range=m["price"],
-            cuisine_types=m["categories"],
+            rating=0.0,
+            review_count=0,
+            cuisine_types=[c.replace("_", " ").title() for c in m["cuisines"]],
             address=m["address"],
-            distance_miles=m["distance_miles"],
-            is_open_now=m["is_open_now"],
+            distance_miles=m["dist"],
             allergen_safety=allergen_report,
             dietary_compatibility=dietary_report,
             safe_menu_items=safe_items[:5],
             match_score=round(min(score_val, 100), 1),
-            match_reasons=[f"Rated {m['rating']}/5", f"{len(safe_items)} safe menu items"],
+            match_reasons=[f"{m['dist']} mi away", f"{len(safe_items)} safe menu items"],
             warnings=allergen_report.warnings if allergen_report else [],
         ))
 
