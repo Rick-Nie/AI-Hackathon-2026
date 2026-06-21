@@ -89,20 +89,25 @@ export interface AllergenSafetyReport {
 
 export interface Restaurant {
   name: string;
-  place_id: string;
+  place_id?: string;
+  yelp_id?: string;
   address: string;
   rating: number;
   review_count: number;
-  cuisines: string[];
+  cuisines?: string[];
+  cuisine_types?: string[];
   price_range?: string;
   phone?: string;
   url?: string;
   distance_miles?: number;
-  is_open: boolean;
+  is_open?: boolean;
+  is_open_now?: boolean;
   match_score: number;
-  dietary_tags: string[];
-  recommended_dishes: MenuItem[];
-  allergen_report: AllergenSafetyReport;
+  dietary_tags?: string[];
+  recommended_dishes?: MenuItem[];
+  safe_menu_items?: MenuItem[];
+  allergen_report?: AllergenSafetyReport;
+  allergen_safety?: AllergenSafetyReport;
 }
 
 export interface RestaurantSearchRequest {
@@ -127,6 +132,7 @@ export interface ChatResponse {
   reply: string;
   updated_preferences?: UserPreferences;
   suggested_searches: string[];
+  should_search?: boolean;
 }
 
 export interface ConversationMessage {

@@ -59,132 +59,142 @@ export default function RestaurantResults({
       </div>
 
       <div className="restaurants-grid">
-        {restaurants.map((restaurant) => (
-          <div key={restaurant.place_id} className="restaurant-card">
-            <div className="card-header">
-              <div>
-                <h3>{restaurant.name}</h3>
-                <div className="restaurant-meta">
-                  <span className="rating">
-                    <Star size={14} fill="currentColor" />
-                    {restaurant.rating.toFixed(1)}
-                  </span>
-                  <span className="review-count">
-                    ({restaurant.review_count} reviews)
-                  </span>
+        {restaurants.map((restaurant) => {
+          const cuisines = restaurant.cuisines ?? restaurant.cuisine_types ?? []
+          const allergenReport = restaurant.allergen_report ?? restaurant.allergen_safety
+          const recommendedDishes = restaurant.recommended_dishes ?? restaurant.safe_menu_items ?? []
+          const isOpen = restaurant.is_open ?? restaurant.is_open_now ?? false
+
+          return (
+            <div
+              key={restaurant.place_id ?? restaurant.yelp_id ?? restaurant.name}
+              className="restaurant-card"
+            >
+              <div className="card-header">
+                <div>
+                  <h3>{restaurant.name}</h3>
+                  <div className="restaurant-meta">
+                    <span className="rating">
+                      <Star size={14} fill="currentColor" />
+                      {restaurant.rating.toFixed(1)}
+                    </span>
+                    <span className="review-count">
+                      ({restaurant.review_count} reviews)
+                    </span>
+                  </div>
+                </div>
+                <div className="match-score">
+                  <div
+                    className="score-badge"
+                    style={{
+                      background: `hsl(${(restaurant.match_score * 1.2) % 360}, 70%, 50%)`,
+                    }}
+                  >
+                    {Math.round(restaurant.match_score)}%
+                  </div>
+                  <span className="score-label">Match</span>
                 </div>
               </div>
-              <div className="match-score">
+
+              <div className="cuisines">
+                {cuisines.map((cuisine) => (
+                  <span key={cuisine} className="cuisine-badge">
+                    {cuisine}
+                  </span>
+                ))}
+              </div>
+
+              <div className="allergen-section">
                 <div
-                  className="score-badge"
-                  style={{
-                    background: `hsl(${(restaurant.match_score * 1.2) % 360}, 70%, 50%)`,
-                  }}
+                  className={`safety-indicator ${allergenReport?.is_safe ? 'safe' : 'warning'}`}
                 >
-                  {Math.round(restaurant.match_score)}%
-                </div>
-                <span className="score-label">Match</span>
-              </div>
-            </div>
-
-            <div className="cuisines">
-              {restaurant.cuisines.map((cuisine) => (
-                <span key={cuisine} className="cuisine-badge">
-                  {cuisine}
-                </span>
-              ))}
-            </div>
-
-            <div className="allergen-section">
-              <div
-                className={`safety-indicator ${restaurant.allergen_report.is_safe ? 'safe' : 'warning'}`}
-              >
-                {restaurant.allergen_report.is_safe ? (
-                  <>
-                    <Check size={16} />
-                    <span>Allergen Safe</span>
-                  </>
-                ) : (
-                  <>
-                    <AlertTriangle size={16} />
-                    <span>Allergen Warning</span>
-                  </>
-                )}
-              </div>
-              <div className="safety-score">
-                Safety Score:{' '}
-                <strong style={{ color: getRiskColor(restaurant.allergen_report.overall_risk) }}>
-                  {restaurant.allergen_report.safety_score}/100
-                </strong>
-              </div>
-            </div>
-
-            {restaurant.allergen_report.unsafe_items.length > 0 && (
-              <div className="unsafe-items">
-                <strong className="warning-label">⚠️ Avoid:</strong>
-                <div className="items-list">
-                  {restaurant.allergen_report.unsafe_items.slice(0, 3).map((item, idx) => (
-                    <span key={idx} className="unsafe-item">
-                      {item}
-                    </span>
-                  ))}
-                  {restaurant.allergen_report.unsafe_items.length > 3 && (
-                    <span className="more-items">
-                      +{restaurant.allergen_report.unsafe_items.length - 3} more
-                    </span>
+                  {allergenReport?.is_safe ? (
+                    <>
+                      <Check size={16} />
+                      <span>Allergen Safe</span>
+                    </>
+                  ) : (
+                    <>
+                      <AlertTriangle size={16} />
+                      <span>Allergen Warning</span>
+                    </>
                   )}
                 </div>
-              </div>
-            )}
-
-            {restaurant.recommended_dishes.length > 0 && (
-              <div className="recommended-dishes">
-                <strong className="dishes-label">✅ Recommended Dishes:</strong>
-                <div className="dishes-list">
-                  {restaurant.recommended_dishes.slice(0, 3).map((dish, idx) => (
-                    <div key={idx} className="dish-item">
-                      <span className="dish-name">{dish.name}</span>
-                      {dish.price_usd && (
-                        <span className="dish-price">${dish.price_usd.toFixed(2)}</span>
-                      )}
-                    </div>
-                  ))}
+                <div className="safety-score">
+                  Safety Score:{' '}
+                  <strong style={{ color: getRiskColor(allergenReport?.overall_risk ?? 'UNKNOWN') }}>
+                    {allergenReport?.safety_score ?? 0}/100
+                  </strong>
                 </div>
               </div>
-            )}
 
-            <div className="restaurant-details">
-              {restaurant.distance_miles !== undefined && (
-                <div className="detail-item">
-                  <MapPin size={14} />
-                  <span>{restaurant.distance_miles.toFixed(1)} mi away</span>
+              {allergenReport?.unsafe_items?.length ? (
+                <div className="unsafe-items">
+                  <strong className="warning-label">⚠️ Avoid:</strong>
+                  <div className="items-list">
+                    {allergenReport.unsafe_items.slice(0, 3).map((item, idx) => (
+                      <span key={idx} className="unsafe-item">
+                        {item}
+                      </span>
+                    ))}
+                    {allergenReport.unsafe_items.length > 3 && (
+                      <span className="more-items">
+                        +{allergenReport.unsafe_items.length - 3} more
+                      </span>
+                    )}
+                  </div>
                 </div>
-              )}
-              {restaurant.phone && (
-                <div className="detail-item">
-                  <Phone size={14} />
-                  <a href={`tel:${restaurant.phone}`}>{restaurant.phone}</a>
-                </div>
-              )}
-              {restaurant.url && (
-                <div className="detail-item">
-                  <Globe size={14} />
-                  <a href={restaurant.url} target="_blank" rel="noopener noreferrer">
-                    View on Map
-                  </a>
-                </div>
-              )}
-            </div>
+              ) : null}
 
-            <div className="card-status">
-              {restaurant.is_open ? (
-                <span className="open">🟢 Open Now</span>
-              ) : (
-                <span className="closed">🔴 Closed</span>
+              {recommendedDishes.length > 0 && (
+                <div className="recommended-dishes">
+                  <strong className="dishes-label">✅ Recommended Dishes:</strong>
+                  <div className="dishes-list">
+                    {recommendedDishes.slice(0, 3).map((dish, idx) => (
+                      <div key={idx} className="dish-item">
+                        <span className="dish-name">{dish.name}</span>
+                        {dish.price_usd && (
+                          <span className="dish-price">${dish.price_usd.toFixed(2)}</span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
               )}
+
+              <div className="restaurant-details">
+                {restaurant.distance_miles !== undefined && (
+                  <div className="detail-item">
+                    <MapPin size={14} />
+                    <span>{restaurant.distance_miles.toFixed(1)} mi away</span>
+                  </div>
+                )}
+                {restaurant.phone && (
+                  <div className="detail-item">
+                    <Phone size={14} />
+                    <a href={`tel:${restaurant.phone}`}>{restaurant.phone}</a>
+                  </div>
+                )}
+                {restaurant.url && (
+                  <div className="detail-item">
+                    <Globe size={14} />
+                    <a href={restaurant.url} target="_blank" rel="noopener noreferrer">
+                      View on Map
+                    </a>
+                  </div>
+                )}
+              </div>
+
+              <div className="card-status">
+                {isOpen ? (
+                  <span className="open">🟢 Open Now</span>
+                ) : (
+                  <span className="closed">🔴 Closed</span>
+                )}
+              </div>
             </div>
-          </div>
-        ))}
+          )
+        })}
       </div>
     </div>
   )

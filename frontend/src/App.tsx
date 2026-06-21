@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import './App.css'
 import ChatInterface from './components/ChatInterface'
 import RestaurantResults from './components/RestaurantResults'
@@ -30,16 +30,25 @@ function App() {
     setPreferences(updatedPrefs)
   }
 
-  const handleSearch = async () => {
+  const handleSearch = async (overridePrefs?: UserPreferences) => {
     setLoading(true)
     try {
       const response = await api.searchRestaurants({
-        preferences,
+        preferences: overridePrefs ?? preferences,
         limit: 10,
       })
-      setRestaurants(response.restaurants)
+
+      const restaurants = Array.isArray(response.restaurants)
+        ? response.restaurants
+        : []
+
+      setRestaurants(restaurants)
       setHasSearched(true)
       setTab('results')
+
+      if (!Array.isArray(response.restaurants)) {
+        console.error('Unexpected restaurant search response:', response)
+      }
     } catch (error) {
       console.error('Search failed:', error)
     } finally {

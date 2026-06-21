@@ -80,15 +80,25 @@ async def chat_endpoint(request: ChatRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Chat failed: {str(e)}")
 
-    # Suggest a search if preferences are sufficiently populated
+    # Suggest a search if preferences contain enough context for restaurant matching
     suggestions = []
-    if updated_prefs and (updated_prefs.allergens or updated_prefs.dietary_styles):
+    should_search = False
+    prefs_for_search = updated_prefs or request.user_preferences
+    if prefs_for_search and (
+        prefs_for_search.allergens
+        or prefs_for_search.dietary_styles
+        or prefs_for_search.preferred_cuisines
+        or prefs_for_search.location
+        or prefs_for_search.custom_notes
+    ):
         suggestions.append("Search restaurants with your current preferences")
+        should_search = True
 
     return ChatResponse(
         reply=reply,
         updated_preferences=updated_prefs,
         suggested_searches=suggestions,
+        should_search=should_search,
     )
 
 

@@ -162,3 +162,4 @@ class ChatResponse(BaseModel):
     reply: str
     updated_preferences: Optional[UserPreferences] = None
     suggested_searches: list[str] = Field(default_factory=list)
+    should_search: bool = False

@@ -61,7 +61,7 @@ export default function PreferenceBuilder({
           <label className="pref-label">🚫 Allergens</label>
           <div className="pref-tags">
             {preferences.allergens.map((allergen) => (
-              <tag key={allergen} className="pref-tag allergen-tag">
+              <span key={allergen} className="pref-tag allergen-tag">
                 <span>{allergen}</span>
                 <button
                   onClick={() => removeAllergen(allergen)}
@@ -70,7 +70,7 @@ export default function PreferenceBuilder({
                 >
                   <X size={14} />
                 </button>
-              </tag>
+              </span>
             ))}
           </div>
         </div>
@@ -81,7 +81,7 @@ export default function PreferenceBuilder({
           <label className="pref-label">🥗 Diet</label>
           <div className="pref-tags">
             {preferences.dietary_styles.map((style) => (
-              <tag key={style} className="pref-tag diet-tag">
+              <span key={style} className="pref-tag diet-tag">
                 <span>{style}</span>
                 <button
                   onClick={() => removeDietaryStyle(style)}
@@ -90,7 +90,7 @@ export default function PreferenceBuilder({
                 >
                   <X size={14} />
                 </button>
-              </tag>
+              </span>
             ))}
           </div>
         </div>
@@ -101,7 +101,7 @@ export default function PreferenceBuilder({
           <label className="pref-label">🍜 Cuisines</label>
           <div className="pref-tags">
             {preferences.preferred_cuisines.map((cuisine) => (
-              <tag key={cuisine} className="pref-tag cuisine-tag">
+              <span key={cuisine} className="pref-tag cuisine-tag">
                 <span>{cuisine}</span>
                 <button
                   onClick={() => removeCuisine(cuisine)}
@@ -110,7 +110,7 @@ export default function PreferenceBuilder({
                 >
                   <X size={14} />
                 </button>
-              </tag>
+              </span>
             ))}
           </div>
         </div>

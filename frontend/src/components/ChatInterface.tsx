@@ -7,7 +7,7 @@ import './ChatInterface.css'
 interface ChatInterfaceProps {
   preferences: UserPreferences
   onPreferencesUpdate: (prefs: UserPreferences) => void
-  onSearch: () => void
+  onSearch: (prefs?: UserPreferences) => Promise<void>
 }
 
 export default function ChatInterface({
@@ -42,8 +42,21 @@ export default function ChatInterface({
     const userMessage = input.trim()
     setInput('')
 
+    // Preserve the last chat request as search context
+    const userSearchNotes = preferences.custom_notes
+      ? `${preferences.custom_notes} ${userMessage}`
+      : userMessage
+
+    const requestPreferences = {
+      ...preferences,
+      custom_notes: userSearchNotes,
+    }
+
     // Add user message to chat
-    const updatedMessages = [...messages, { role: 'user', content: userMessage }]
+    const updatedMessages: ConversationMessage[] = [
+      ...messages,
+      { role: 'user', content: userMessage },
+    ]
     setMessages(updatedMessages)
     setLoading(true)
 
@@ -51,15 +64,21 @@ export default function ChatInterface({
       const chatRequest: ChatRequest = {
         message: userMessage,
         conversation_history: updatedMessages,
-        user_preferences: preferences,
+        user_preferences: requestPreferences,
       }
 
       const response = await api.chat(chatRequest)
 
-      // Update preferences if they were updated
-      if (response.updated_preferences) {
-        onPreferencesUpdate(response.updated_preferences)
-      }
+      const mergedPreferences = response.updated_preferences
+        ? {
+            ...requestPreferences,
+            ...response.updated_preferences,
+            custom_notes:
+              response.updated_preferences.custom_notes ?? requestPreferences.custom_notes,
+          }
+        : requestPreferences
+
+      onPreferencesUpdate(mergedPreferences)
 
       // Add assistant response
       setMessages((prev) => [
@@ -69,6 +88,10 @@ export default function ChatInterface({
 
       // Store suggested searches
       setSuggestedSearches(response.suggested_searches)
+
+      if (response.should_search) {
+        await onSearch(mergedPreferences)
+      }
     } catch (error) {
       console.error('Chat error:', error)
       setMessages((prev) => [
@@ -84,9 +107,9 @@ export default function ChatInterface({
     }
   }
 
-  const handleSuggestedSearch = (suggestion: string) => {
+  const handleSuggestedSearch = async (suggestion: string) => {
     if (suggestion.includes('Search restaurants')) {
-      onSearch()
+      await onSearch()
     }
   }
 

@@ -1,0 +1,142 @@
+﻿src/App.tsx(3,27): error TS6142: Module './components/ChatInterface' was resolved to 'C:/Users/Someone/source/repos/AI-Hackathon-2026/frontend/src/components/ChatInterface.tsx', but '--jsx' is not set.
+src/App.tsx(4,31): error TS6142: Module './components/RestaurantResults' was resolved to 'C:/Users/Someone/source/repos/AI-Hackathon-2026/frontend/src/components/RestaurantResults.tsx', but '--jsx' is not set.
+src/App.tsx(5,31): error TS6142: Module './components/PreferenceBuilder' was resolved to 'C:/Users/Someone/source/repos/AI-Hackathon-2026/frontend/src/components/PreferenceBuilder.tsx', but '--jsx' is not set.
+src/App.tsx(60,5): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/App.tsx(61,7): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/App.tsx(62,9): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/App.tsx(63,11): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/App.tsx(64,13): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/App.tsx(65,13): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/App.tsx(66,13): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/App.tsx(71,7): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/App.tsx(72,9): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/App.tsx(73,11): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/App.tsx(77,13): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/App.tsx(81,13): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/App.tsx(85,15): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/App.tsx(91,9): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/App.tsx(93,13): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/App.tsx(94,15): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/App.tsx(99,15): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/App.tsx(107,13): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/components/ChatInterface.tsx(117,5): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/components/ChatInterface.tsx(118,7): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/components/ChatInterface.tsx(120,11): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/components/ChatInterface.tsx(121,13): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/components/ChatInterface.tsx(124,13): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/components/ChatInterface.tsx(125,15): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/components/ChatInterface.tsx(130,11): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/components/ChatInterface.tsx(131,13): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/components/ChatInterface.tsx(132,13): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/components/ChatInterface.tsx(133,15): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/components/ChatInterface.tsx(134,17): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/components/ChatInterface.tsx(135,17): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/components/ChatInterface.tsx(136,17): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/components/ChatInterface.tsx(141,9): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/components/ChatInterface.tsx(145,9): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/components/ChatInterface.tsx(146,11): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/components/ChatInterface.tsx(147,11): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/components/ChatInterface.tsx(149,15): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/components/ChatInterface.tsx(161,7): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/components/ChatInterface.tsx(162,9): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/components/ChatInterface.tsx(170,9): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/components/ChatInterface.tsx(171,22): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/components/ChatInterface.tsx(171,45): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/components/PreferenceBuilder.tsx(50,5): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/components/PreferenceBuilder.tsx(51,7): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/components/PreferenceBuilder.tsx(54,9): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/components/PreferenceBuilder.tsx(60,9): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/components/PreferenceBuilder.tsx(61,11): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/components/PreferenceBuilder.tsx(62,11): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/components/PreferenceBuilder.tsx(64,15): error TS2339: Property 'tag' does not exist on type 'JSX.IntrinsicElements'.
+src/components/PreferenceBuilder.tsx(64,15): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/components/PreferenceBuilder.tsx(65,17): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/components/PreferenceBuilder.tsx(66,17): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/components/PreferenceBuilder.tsx(71,19): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/components/PreferenceBuilder.tsx(73,15): error TS2339: Property 'tag' does not exist on type 'JSX.IntrinsicElements'.
+src/components/PreferenceBuilder.tsx(80,9): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/components/PreferenceBuilder.tsx(81,11): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/components/PreferenceBuilder.tsx(82,11): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/components/PreferenceBuilder.tsx(84,15): error TS2339: Property 'tag' does not exist on type 'JSX.IntrinsicElements'.
+src/components/PreferenceBuilder.tsx(84,15): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/components/PreferenceBuilder.tsx(85,17): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/components/PreferenceBuilder.tsx(86,17): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/components/PreferenceBuilder.tsx(91,19): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/components/PreferenceBuilder.tsx(93,15): error TS2339: Property 'tag' does not exist on type 'JSX.IntrinsicElements'.
+src/components/PreferenceBuilder.tsx(100,9): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/components/PreferenceBuilder.tsx(101,11): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/components/PreferenceBuilder.tsx(102,11): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/components/PreferenceBuilder.tsx(104,15): error TS2339: Property 'tag' does not exist on type 'JSX.IntrinsicElements'.
+src/components/PreferenceBuilder.tsx(104,15): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/components/PreferenceBuilder.tsx(105,17): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/components/PreferenceBuilder.tsx(106,17): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/components/PreferenceBuilder.tsx(111,19): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/components/PreferenceBuilder.tsx(113,15): error TS2339: Property 'tag' does not exist on type 'JSX.IntrinsicElements'.
+src/components/PreferenceBuilder.tsx(120,9): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/components/PreferenceBuilder.tsx(125,11): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/components/RestaurantResults.tsx(18,7): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/components/RestaurantResults.tsx(19,9): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/components/RestaurantResults.tsx(20,11): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/components/RestaurantResults.tsx(21,11): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/components/RestaurantResults.tsx(29,7): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/components/RestaurantResults.tsx(30,9): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/components/RestaurantResults.tsx(31,11): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/components/RestaurantResults.tsx(53,5): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/components/RestaurantResults.tsx(54,7): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/components/RestaurantResults.tsx(55,9): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/components/RestaurantResults.tsx(56,9): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/components/RestaurantResults.tsx(61,7): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/components/RestaurantResults.tsx(69,13): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/components/RestaurantResults.tsx(73,15): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/components/RestaurantResults.tsx(74,17): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/components/RestaurantResults.tsx(75,19): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/components/RestaurantResults.tsx(76,19): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/components/RestaurantResults.tsx(77,21): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/components/RestaurantResults.tsx(78,23): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/components/RestaurantResults.tsx(81,21): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/components/RestaurantResults.tsx(86,17): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/components/RestaurantResults.tsx(87,19): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/components/RestaurantResults.tsx(95,19): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/components/RestaurantResults.tsx(99,15): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/components/RestaurantResults.tsx(101,19): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/components/RestaurantResults.tsx(107,15): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/components/RestaurantResults.tsx(108,17): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/components/RestaurantResults.tsx(112,21): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/components/RestaurantResults.tsx(113,23): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/components/RestaurantResults.tsx(114,23): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/components/RestaurantResults.tsx(117,21): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/components/RestaurantResults.tsx(118,23): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/components/RestaurantResults.tsx(119,23): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/components/RestaurantResults.tsx(123,17): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/components/RestaurantResults.tsx(125,19): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/components/RestaurantResults.tsx(131,16): error TS18048: 'allergenReport.unsafe_items.length' is possibly 'undefined'.
+src/components/RestaurantResults.tsx(132,17): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/components/RestaurantResults.tsx(133,19): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/components/RestaurantResults.tsx(134,19): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/components/RestaurantResults.tsx(135,22): error TS18048: 'allergenReport' is possibly 'undefined'.
+src/components/RestaurantResults.tsx(136,23): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/components/RestaurantResults.tsx(140,22): error TS18048: 'allergenReport' is possibly 'undefined'.
+src/components/RestaurantResults.tsx(141,23): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/components/RestaurantResults.tsx(142,27): error TS18048: 'allergenReport' is possibly 'undefined'.
+src/components/RestaurantResults.tsx(150,17): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/components/RestaurantResults.tsx(151,19): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/components/RestaurantResults.tsx(152,19): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/components/RestaurantResults.tsx(154,23): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/components/RestaurantResults.tsx(155,25): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/components/RestaurantResults.tsx(157,27): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/components/RestaurantResults.tsx(165,15): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/components/RestaurantResults.tsx(167,19): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/components/RestaurantResults.tsx(168,21): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/components/RestaurantResults.tsx(169,21): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/components/RestaurantResults.tsx(173,19): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/components/RestaurantResults.tsx(174,21): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/components/RestaurantResults.tsx(175,21): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/components/RestaurantResults.tsx(179,19): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/components/RestaurantResults.tsx(180,21): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/components/RestaurantResults.tsx(181,21): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/components/RestaurantResults.tsx(188,15): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/components/RestaurantResults.tsx(190,19): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/components/RestaurantResults.tsx(192,19): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/main.tsx(3,17): error TS6142: Module './App' was resolved to 'C:/Users/Someone/source/repos/AI-Hackathon-2026/frontend/src/App.tsx', but '--jsx' is not set.
+src/main.tsx(7,3): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/main.tsx(8,5): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.

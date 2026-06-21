@@ -111,16 +111,24 @@ async def _google_text_search(preferences: UserPreferences, limit: int) -> list[
     location = preferences.location or "San Francisco, CA"
     query_parts = [f"restaurants in {location}"]
 
+    # Add any user notes or search terms if explicit preferences are not enough
+    if preferences.custom_notes:
+        query_parts.append(preferences.custom_notes)
+
     # Add dietary style keywords
     for style in preferences.dietary_styles:
         kws = DIETARY_STYLE_KEYWORDS.get(style, [])
         query_parts.extend(kws)
 
     # Add cuisine keywords
-    for cuisine in preferences.preferred_cuisines:
-        kw = CUISINE_TO_KEYWORD.get(cuisine)
-        if kw:
-            query_parts.append(kw)
+    if preferences.preferred_cuisines:
+        for cuisine in preferences.preferred_cuisines:
+            kw = CUISINE_TO_KEYWORD.get(cuisine)
+            if kw:
+                query_parts.append(kw)
+    elif preferences.custom_notes:
+        # fallback to any cuisine-like words in custom_notes
+        query_parts.append(preferences.custom_notes)
 
     # Add avoid/allergen keywords as negative hints (we'll still deterministically check allergens later)
     # Google Text Search doesn't support negative operators reliably, so we just include them for context.
