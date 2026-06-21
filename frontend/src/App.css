@@ -49,6 +49,16 @@
   width: 100%;
 }
 
+.container.with-sidebar {
+  display: flex;
+  gap: 20px;
+  align-items: stretch;
+}
+
+.sidebar + .main-content {
+  flex: 1;
+}
+
 .tab-navigation {
   display: flex;
   gap: 12px;

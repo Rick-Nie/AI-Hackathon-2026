@@ -6,14 +6,24 @@ interface RestaurantResultsProps {
   restaurants: Restaurant[]
   preferences: UserPreferences
   loading: boolean
+  searchLocation?: string
+  preferencesSummary?: string
+  onFetchOsm?: () => void
+  osmRestaurants?: Restaurant[]
+  osmLoading?: boolean
 }
 
 export default function RestaurantResults({
   restaurants,
   preferences,
   loading,
+  searchLocation,
+  preferencesSummary,
+  onFetchOsm,
+  osmRestaurants,
+  osmLoading,
 }: RestaurantResultsProps) {
-  if (loading) {
+  if (loading || osmLoading) {
     return (
       <div className="restaurant-results">
         <div className="loading-message">
@@ -29,6 +39,11 @@ export default function RestaurantResults({
       <div className="restaurant-results">
         <div className="empty-message">
           <p>No restaurants found. Try adjusting your preferences.</p>
+          {onFetchOsm && (
+            <button className="osm-button" onClick={onFetchOsm}>
+              {osmLoading ? 'Loading OSM comparison…' : 'Show OSM raw restaurant list'}
+            </button>
+          )}
         </div>
       </div>
     )
@@ -49,14 +64,39 @@ export default function RestaurantResults({
     }
   }
 
+  const externalSearchUrl = (r: Restaurant) => {
+    const q = encodeURIComponent(`${r.name} ${r.address || ''}`)
+    return `https://www.google.com/search?q=${q}`
+  }
+
   return (
     <div className="restaurant-results">
       <div className="results-header">
         <h2>Found {restaurants.length} Restaurants</h2>
         <p className="results-summary">
-          {preferences.location && `Near ${preferences.location}`}
+          {searchLocation ? `Near ${searchLocation}` : preferences.location && `Near ${preferences.location}`}
+          {preferencesSummary ? ` · ${preferencesSummary}` : ''}
         </p>
       </div>
+
+      <div className="results-controls">
+        {onFetchOsm && !osmLoading && (
+          <button className="osm-button" onClick={onFetchOsm}>
+            Compare with raw OSM results
+          </button>
+        )}
+      </div>
+
+      {osmRestaurants && osmRestaurants.length > 0 && (
+        <div className="osm-comparison">
+          <h3>OSM Raw Matches ({osmRestaurants.length})</h3>
+          <ul>
+            {osmRestaurants.map((r) => (
+              <li key={r.yelp_id}>{r.name} — {r.address || 'No address'} — Score: {r.match_score ?? 'N/A'}</li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       <div className="restaurants-grid">
         {restaurants.map((restaurant) => (
@@ -67,10 +107,10 @@ export default function RestaurantResults({
                 <div className="restaurant-meta">
                   <span className="rating">
                     <Star size={14} fill="currentColor" />
-                    {restaurant.rating.toFixed(1)}
+                    {restaurant.rating ? restaurant.rating.toFixed(1) : '—'}
                   </span>
                   <span className="review-count">
-                    ({restaurant.review_count} reviews)
+                    ({restaurant.review_count || 0} reviews)
                   </span>
                 </div>
               </div>
@@ -88,7 +128,7 @@ export default function RestaurantResults({
             </div>
 
             <div className="cuisines">
-              {restaurant.cuisines.map((cuisine) => (
+              {(restaurant.cuisine_types || []).map((cuisine) => (
                 <span key={cuisine} className="cuisine-badge">
                   {cuisine}
                 </span>
@@ -96,27 +136,33 @@ export default function RestaurantResults({
             </div>
 
             <div className="allergen-section">
-              <div
-                className={`safety-indicator ${restaurant.allergen_report.is_safe ? 'safe' : 'warning'}`}
-              >
-                {restaurant.allergen_report.is_safe ? (
-                  <>
-                    <Check size={16} />
-                    <span>Allergen Safe</span>
-                  </>
-                ) : (
-                  <>
-                    <AlertTriangle size={16} />
-                    <span>Allergen Warning</span>
-                  </>
-                )}
-              </div>
-              <div className="safety-score">
-                Safety Score:{' '}
-                <strong style={{ color: getRiskColor(restaurant.allergen_report.overall_risk) }}>
-                  {restaurant.allergen_report.safety_score}/100
-                </strong>
-              </div>
+              {restaurant.allergen_report ? (
+                <>
+                  <div
+                    className={`safety-indicator ${restaurant.allergen_report.is_safe ? 'safe' : 'warning'}`}
+                  >
+                    {restaurant.allergen_report.is_safe ? (
+                      <>
+                        <Check size={16} />
+                        <span>Allergen Safe</span>
+                      </>
+                    ) : (
+                      <>
+                        <AlertTriangle size={16} />
+                        <span>Allergen Warning</span>
+                      </>
+                    )}
+                  </div>
+                  <div className="safety-score">
+                    Safety Score:{' '}
+                    <strong style={{ color: getRiskColor(restaurant.allergen_report.overall_risk) }}>
+                      {restaurant.allergen_report.safety_score}/100
+                    </strong>
+                  </div>
+                </>
+              ) : (
+                <div className="safety-unknown">Allergen data unavailable</div>
+              )}
             </div>
 
             {restaurant.allergen_report.unsafe_items.length > 0 && (
@@ -137,7 +183,7 @@ export default function RestaurantResults({
               </div>
             )}
 
-            {restaurant.recommended_dishes.length > 0 && (
+            {restaurant.recommended_dishes && restaurant.recommended_dishes.length > 0 && (
               <div className="recommended-dishes">
                 <strong className="dishes-label">✅ Recommended Dishes:</strong>
                 <div className="dishes-list">
@@ -166,13 +212,20 @@ export default function RestaurantResults({
                   <a href={`tel:${restaurant.phone}`}>{restaurant.phone}</a>
                 </div>
               )}
-              {restaurant.url && (
-                <div className="detail-item">
-                  <Globe size={14} />
+              <div className="detail-item">
+                <Globe size={14} />
+                {restaurant.url ? (
                   <a href={restaurant.url} target="_blank" rel="noopener noreferrer">
-                    View on Yelp
+                    Website
                   </a>
-                </div>
+                ) : (
+                  <a href={externalSearchUrl(restaurant)} target="_blank" rel="noopener noreferrer">
+                    Search online
+                  </a>
+                )}
+              </div>
+              {(!restaurant.review_count || restaurant.review_count === 0) && (
+                <div className="review-note">No third-party reviews available — shown with transparent score.</div>
               )}
             </div>
 

@@ -53,6 +53,8 @@ export interface UserPreferences {
   budget_max_usd?: number;
   preferred_price_range?: string;
   location?: string;
+  latitude?: number;
+  longitude?: number;
   max_distance_miles: number;
   min_rating: number;
   requires_open_now: boolean;
@@ -94,21 +96,44 @@ export interface Restaurant {
   address: string;
   rating: number;
   review_count: number;
-  cuisines: string[];
+  cuisine_types: string[];
   price_range?: string;
   phone?: string;
   url?: string;
   distance_miles?: number;
-  is_open: boolean;
-  match_score: number;
-  dietary_tags: string[];
-  recommended_dishes: MenuItem[];
-  allergen_report: AllergenSafetyReport;
+  is_open?: boolean;
+  match_score?: number;
+  match_reasons?: string[];
+  dietary_compatibility?: any;
+  recommended_dishes?: MenuItem[];
+  allergen_report?: AllergenSafetyReport;
+  warnings?: string[];
+  latitude?: number;
+  longitude?: number;
+  google_reviews?: Array<{
+    author_name: string;
+    rating: number;
+    text: string;
+    relative_time_description: string;
+  }>;
+  ai_dietary_note?: string;
+  food_types?: string[];
+  fits_diet?: boolean | null;
 }
 
 export interface RestaurantSearchRequest {
   preferences: UserPreferences;
+  latitude?: number;
+  longitude?: number;
   limit: number;
+}
+
+export interface MapSearchRequest {
+  preferences: UserPreferences;
+  latitude: number;
+  longitude: number;
+  radius_meters?: number;
+  limit?: number;
 }
 
 export interface RestaurantSearchResponse {

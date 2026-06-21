@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react'
 import './App.css'
 import ChatInterface from './components/ChatInterface'
-import RestaurantResults from './components/RestaurantResults'
 import PreferenceBuilder from './components/PreferenceBuilder'
-import { UserPreferences, SpiceLevel, Restaurant } from './types'
-import { api } from './api'
-import { MessageCircle, Utensils } from 'lucide-react'
+import MapResults from './pages/MapResults'
+import Sidebar from './components/Sidebar'
+import { UserPreferences, SpiceLevel } from './types'
+import { Utensils } from 'lucide-react'
 
 const DEFAULT_PREFERENCES: UserPreferences = {
   dietary_styles: [],
@@ -15,6 +15,8 @@ const DEFAULT_PREFERENCES: UserPreferences = {
   preferred_cuisines: [],
   disliked_cuisines: [],
   max_spice_level: SpiceLevel.MEDIUM,
+  latitude: undefined,
+  longitude: undefined,
   max_distance_miles: 5.0,
   min_rating: 3.5,
   requires_open_now: true,
@@ -22,31 +24,30 @@ const DEFAULT_PREFERENCES: UserPreferences = {
 
 function App() {
   const [preferences, setPreferences] = useState<UserPreferences>(DEFAULT_PREFERENCES)
-  const [restaurants, setRestaurants] = useState<Restaurant[]>([])
-  const [loading, setLoading] = useState(false)
-  const [tab, setTab] = useState<'chat' | 'results'>('chat')
-  const [hasSearched, setHasSearched] = useState(false)
+  const [tab, setTab] = useState<'chat' | 'restaurants'>('chat')
 
   const handlePreferencesUpdate = (updatedPrefs: UserPreferences) => {
     setPreferences(updatedPrefs)
   }
 
-  const handleSearch = async () => {
-    setLoading(true)
-    try {
-      const response = await api.searchRestaurants({
-        preferences,
-        limit: 10,
-      })
-      setRestaurants(response.restaurants)
-      setHasSearched(true)
-      setTab('results')
-    } catch (error) {
-      console.error('Search failed:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
+  // Auto-detect location on startup (browser caches permission — fast if already granted)
+  useEffect(() => {
+    if (!('geolocation' in navigator)) return
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const lat = pos.coords.latitude
+        const lon = pos.coords.longitude
+        setPreferences((p) => ({
+          ...p,
+          latitude: lat,
+          longitude: lon,
+          location: p.location || `${lat.toFixed(4)}, ${lon.toFixed(4)}`,
+        }))
+      },
+      () => { /* permission denied — user can still click "Use My Location" in the map tab */ },
+      { enableHighAccuracy: true, timeout: 10000 }
+    )
+  }, [])
 
   return (
     <div className="app">
@@ -60,25 +61,8 @@ function App() {
         </div>
       </header>
 
-      <div className="container">
-        <div className="tab-navigation">
-          <button
-            className={`tab-btn ${tab === 'chat' ? 'active' : ''}`}
-            onClick={() => setTab('chat')}
-          >
-            <MessageCircle size={20} />
-            Chat Assistant
-          </button>
-          {hasSearched && (
-            <button
-              className={`tab-btn ${tab === 'results' ? 'active' : ''}`}
-              onClick={() => setTab('results')}
-            >
-              <Utensils size={20} />
-              Restaurants ({restaurants.length})
-            </button>
-          )}
-        </div>
+      <div className="container with-sidebar">
+        <Sidebar active={tab} setActive={(t) => setTab(t)} />
 
         <div className="main-content">
           {tab === 'chat' ? (
@@ -86,20 +70,21 @@ function App() {
               <ChatInterface
                 preferences={preferences}
                 onPreferencesUpdate={handlePreferencesUpdate}
-                onSearch={handleSearch}
+                onSearch={() => setTab('restaurants')}
               />
               <PreferenceBuilder
                 preferences={preferences}
                 onPreferencesChange={handlePreferencesUpdate}
-                onSearch={handleSearch}
-                loading={loading}
+                onSearch={() => setTab('restaurants')}
+                loading={false}
               />
             </div>
           ) : (
-            <RestaurantResults
-              restaurants={restaurants}
+            <MapResults
               preferences={preferences}
-              loading={loading}
+              onLocationSaved={(lat, lon, label) =>
+                setPreferences((p) => ({ ...p, latitude: lat, longitude: lon, location: label }))
+              }
             />
           )}
         </div>

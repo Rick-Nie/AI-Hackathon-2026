@@ -1,0 +1,47 @@
+.sidebar {
+  position: relative;
+  width: 220px;
+  background: linear-gradient(180deg, #ffffff, #f8fafc);
+  border-right: 1px solid #e6e6e6;
+  transition: width 0.28s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.sidebar.collapsed {
+  width: 44px;
+}
+
+.collapse-btn {
+  align-self: flex-end;
+  border: none;
+  background: transparent;
+  padding: 8px;
+  cursor: pointer;
+}
+
+.sidebar-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+}
+
+.side-btn {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  transition: background 0.18s ease;
+}
+
+.side-btn span { display: inline-block; }
+.sidebar.collapsed .side-btn span { display: none; }
+
+.side-btn:hover { background: rgba(0,0,0,0.04); }
+.side-btn.active { background: rgba(102,126,234,0.12); }

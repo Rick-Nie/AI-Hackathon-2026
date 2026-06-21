@@ -26,6 +26,7 @@ export default function ChatInterface({
   const [loading, setLoading] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const [suggestedSearches, setSuggestedSearches] = useState<string[]>([])
+  const [lastExtractedPrefs, setLastExtractedPrefs] = useState<UserPreferences | null>(null)
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -59,6 +60,7 @@ export default function ChatInterface({
       // Update preferences if they were updated
       if (response.updated_preferences) {
         onPreferencesUpdate(response.updated_preferences)
+        setLastExtractedPrefs(response.updated_preferences)
       }
 
       // Add assistant response
@@ -103,6 +105,73 @@ export default function ChatInterface({
             </div>
           </div>
         ))}
+
+        {lastExtractedPrefs && (
+          <div className="message message-assistant prefs-summary">
+            <div className="message-avatar">🤖</div>
+            <div className="message-content">
+              <h4>Preferences I saved</h4>
+              <div className="prefs-grid">
+                {lastExtractedPrefs.liked_ingredients.length > 0 && (
+                  <div>
+                    <strong>Likes:</strong>
+                    <div className="pref-tags">
+                      {lastExtractedPrefs.liked_ingredients.map((i) => (
+                        <span key={i} className="pref-chip liked-tag">{i}</span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {lastExtractedPrefs.disliked_ingredients.length > 0 && (
+                  <div>
+                    <strong>Dislikes:</strong>
+                    <div className="pref-tags">
+                      {lastExtractedPrefs.disliked_ingredients.map((i) => (
+                        <span key={i} className="pref-chip dislike-tag">{i}</span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {lastExtractedPrefs.allergens.length > 0 && (
+                  <div>
+                    <strong>Allergens:</strong>
+                    <div className="pref-tags">
+                      {lastExtractedPrefs.allergens.map((a) => (
+                        <span key={a} className="pref-chip allergen-tag">{a}</span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {lastExtractedPrefs.dietary_styles.length > 0 && (
+                  <div>
+                    <strong>Diet:</strong>
+                    <div className="pref-tags">
+                      {lastExtractedPrefs.dietary_styles.map((d) => (
+                        <span key={d} className="pref-chip diet-tag">{d}</span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {lastExtractedPrefs.preferred_cuisines.length > 0 && (
+                  <div>
+                    <strong>Cuisines:</strong>
+                    <div className="pref-tags">
+                      {lastExtractedPrefs.preferred_cuisines.map((c) => (
+                        <span key={c} className="pref-chip cuisine-tag">{c}</span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {lastExtractedPrefs.location && (
+                  <div>
+                    <strong>Location:</strong>
+                    <div>{lastExtractedPrefs.location}</div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
         {loading && (
           <div className="message message-assistant">
             <div className="message-avatar">🤖</div>

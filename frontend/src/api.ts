@@ -4,6 +4,7 @@ import {
   ChatResponse,
   RestaurantSearchRequest,
   RestaurantSearchResponse,
+  MapSearchRequest,
 } from './types'
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000'
@@ -26,6 +27,16 @@ export const api = {
       '/restaurants/search',
       request
     )
+    return response.data
+  },
+
+  searchRestaurantsOsm: async (request: MapSearchRequest) => {
+    const response = await apiClient.post<RestaurantSearchResponse>('/restaurants/osm', request)
+    return response.data
+  },
+
+  searchRestaurantsGoogle: async (request: MapSearchRequest) => {
+    const response = await apiClient.post<RestaurantSearchResponse>('/restaurants/google', request)
     return response.data
   },
 

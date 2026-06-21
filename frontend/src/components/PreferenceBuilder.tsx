@@ -1,5 +1,6 @@
 import { UserPreferences, DietaryStyle, CuisineType } from '../types'
-import { X, Search } from 'lucide-react'
+import { X, Search, MapPin } from 'lucide-react'
+import { useState } from 'react'
 import './PreferenceBuilder.css'
 
 interface PreferenceBuilderProps {
@@ -15,6 +16,55 @@ export default function PreferenceBuilder({
   onSearch,
   loading,
 }: PreferenceBuilderProps) {
+  const [locating, setLocating] = useState(false)
+
+  const handleGetLocation = async () => {
+    setLocating(true)
+    try {
+      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject)
+      })
+
+      const { latitude, longitude } = position.coords
+      
+      // Use OpenStreetMap's Nominatim reverse geocoding (free, no API key needed)
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`
+      )
+      const data = await response.json()
+      
+      // Extract city name
+      const city = data.address?.city || 
+                   data.address?.town || 
+                   data.address?.county || 
+                   `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`
+      
+      const updated = {
+        ...preferences,
+        location: city,
+        latitude,
+        longitude,
+      }
+      onPreferencesChange(updated)
+    } catch (error) {
+      console.error('Geolocation error:', error)
+      alert('Could not get your location. Please enter it manually.')
+    } finally {
+      setLocating(false)
+    }
+  }
+
+  const handleLocationChange = (newLocation: string) => {
+    const updated = {
+      ...preferences,
+      location: newLocation,
+      // clear precise coords if user types a generic city
+      latitude: undefined,
+      longitude: undefined,
+    }
+    onPreferencesChange(updated)
+  }
+
   const removeAllergen = (allergen: string) => {
     const updated = {
       ...preferences,
@@ -177,6 +227,28 @@ export default function PreferenceBuilder({
           </div>
         </div>
       )}
+
+      <div className="location-section">
+        <label className="pref-label">📍 Location</label>
+        <div className="location-input-group">
+          <input
+            type="text"
+            placeholder="City or neighborhood"
+            value={preferences.location || ''}
+            onChange={(e) => handleLocationChange(e.target.value)}
+            className="location-input"
+          />
+          <button
+            onClick={handleGetLocation}
+            disabled={locating}
+            className="location-btn"
+            title="Detect your current location"
+          >
+            <MapPin size={16} />
+            {locating ? '...' : 'Use My Location'}
+          </button>
+        </div>
+      </div>
 
       {hasPreferences && (
         <button

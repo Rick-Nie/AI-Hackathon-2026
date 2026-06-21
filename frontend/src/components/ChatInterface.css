@@ -18,6 +18,27 @@
   background: #f8f9fa;
 }
 
+.prefs-summary .prefs-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.pref-chip {
+  display: inline-block;
+  padding: 6px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  margin: 4px 4px 0 0;
+}
+
+.prefs-summary .liked-tag { background: #e6f7ff; color: #0f766e; }
+.prefs-summary .dislike-tag { background: #fff1f2; color: #be123c; }
+.prefs-summary .allergen-tag { background: #ffe0e0; color: #c41e3a; }
+.prefs-summary .diet-tag { background: #e6ffe6; color: #1e7e1e; }
+.prefs-summary .cuisine-tag { background: #fff5e0; color: #d97706; }
+
 .message {
   display: flex;
   gap: 12px;
